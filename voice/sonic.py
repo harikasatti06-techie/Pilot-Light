@@ -17,7 +17,7 @@ from smithy_http.aio.crt import AWSCRTHTTPClient
 
 from pilotlight import timeline
 from pilotlight.agent import TOOL_SPECS, IncidentAgent, _speakable
-from pilotlight.config import AWS_REGION, SONIC_MODEL_ID
+from pilotlight.config import SONIC_MODEL_ID, SONIC_REGION
 
 from . import prompt
 
@@ -70,7 +70,7 @@ class SonicSession:
 
     async def start(self) -> None:
         cfg = await AsyncBedrockRuntimeConfig.resolve(
-            region=AWS_REGION, aws_credentials_identity_resolver=_ProfileCredentials(), transport=AWSCRTHTTPClient())
+            region=SONIC_REGION, aws_credentials_identity_resolver=_ProfileCredentials(), transport=AWSCRTHTTPClient())
         client = AsyncBedrockRuntimeClient(config=cfg)
         self._stream = await client.invoke_model_with_bidirectional_stream(
             InvokeModelWithBidirectionalStreamOperationInput(model_id=SONIC_MODEL_ID))

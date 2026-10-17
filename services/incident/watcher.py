@@ -39,6 +39,7 @@ def _fire(reason: str) -> None:
 def main() -> None:
     state = "OK"
     STATE_FILE.parent.mkdir(parents=True, exist_ok=True)
+    STATE_FILE.write_text(state)
     print(f"watching {CHECKOUT_LOG_GROUP}: ALARM at >= {ALARM_THRESHOLD} errors in {ALARM_WINDOW_SECONDS}s")
     while True:
         now = time.time()

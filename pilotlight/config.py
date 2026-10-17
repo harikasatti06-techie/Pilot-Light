@@ -7,7 +7,9 @@ try:  # python-dotenv is not installed in Lambda; env vars come from the functio
 except ImportError:
     pass
 
-AWS_REGION = os.getenv("AWS_REGION", "us-east-1")
+AWS_REGION = os.getenv("AWS_REGION", "us-east-2")
+# Nova 2 Sonic is not offered in us-east-2, so the voice stream stays in us-east-1
+SONIC_REGION = os.getenv("SONIC_REGION", "us-east-1")
 
 FAIL_MODE_PARAM = os.getenv("FAIL_MODE_PARAM", "/pilotlight/checkout/fail_mode")
 ALARM_NAME = os.getenv("ALARM_NAME", "pilotlight-checkout-5xx")
