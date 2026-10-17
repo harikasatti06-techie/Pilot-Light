@@ -80,7 +80,9 @@ def implement_task(
     prompt_file.write_text(prompt)
 
     result = subprocess.run(
-        ["claude", "-p", "--model", "us.anthropic.claude-sonnet-4-6", prompt],
+        ["claude", "-p", "--model", "sonnet",
+         "--allowedTools", "Edit,Write,Bash,Read,Glob,Grep"],
+        input=prompt,
         cwd=repo_path,
         capture_output=True,
         text=True,
