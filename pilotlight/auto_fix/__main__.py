@@ -3,13 +3,25 @@
 Usage:
     python -m pilotlight.auto_fix [INCIDENT_ID]
 """
+import json
 import os
 import sys
+from pathlib import Path
 
-from .. import box_tools, incidents, timeline
+from .. import box_tools
 from ..box_client import client
+from ..config import STATE_DIR
 from .extract import extract_tasks
 from .implement import implement_task
+
+
+def _timeline_add(incident_id: str, type_: str, text: str) -> None:
+    """Best-effort timeline write. Non-fatal if DynamoDB is unavailable."""
+    try:
+        from .. import timeline
+        timeline.add(incident_id, type_, text)
+    except Exception:
+        print(f"[auto_fix] [{type_}] {text}")
 
 
 def _find_file_in_folder(folder_id: str, name: str) -> str | None:
@@ -21,6 +33,34 @@ def _find_file_in_folder(folder_id: str, name: str) -> str | None:
     return None
 
 
+def _load_incident(incident_id: str) -> dict | None:
+    """Load incident record. Tries DynamoDB first, falls back to local .state/ files."""
+    try:
+        from .. import incidents
+        rec = incidents.get(incident_id)
+        if rec:
+            return rec
+    except Exception:
+        pass
+    # Fallback: local JSON in .state/incidents/
+    p = Path(STATE_DIR) / "incidents" / f"{incident_id}.json"
+    if p.exists():
+        return json.loads(p.read_text())
+    return None
+
+
+def _latest_incident_id() -> str | None:
+    """Find the most recent incident ID from local state."""
+    d = Path(STATE_DIR) / "incidents"
+    if not d.exists():
+        return None
+    files = sorted(d.glob("INC-*.json"))
+    if not files:
+        return None
+    rec = json.loads(files[-1].read_text())
+    return rec.get("incident_id")
+
+
 def run(incident_id: str) -> list[str]:
     """Run the full auto-fix pipeline. Returns list of PR URLs."""
     print(f"\n{'='*60}")
@@ -28,7 +68,7 @@ def run(incident_id: str) -> list[str]:
     print(f"{'='*60}\n")
 
     # 1. Load incident record
-    rec = incidents.get(incident_id)
+    rec = _load_incident(incident_id)
     if not rec:
         print(f"[auto_fix] Incident {incident_id} not found")
         return []
@@ -49,7 +89,7 @@ def run(incident_id: str) -> list[str]:
         print("[auto_fix] No postmortem.md in the incident folder")
         return []
 
-    timeline.add(incident_id, "autofix", "Auto-fix pipeline started")
+    _timeline_add(incident_id, "autofix", "Auto-fix pipeline started")
 
     # 3. Extract tasks
     tasks, analysis = extract_tasks(
@@ -62,7 +102,7 @@ def run(incident_id: str) -> list[str]:
 
     if not tasks:
         print("[auto_fix] No tasks extracted")
-        timeline.add(incident_id, "autofix", "No actionable tasks found in postmortem")
+        _timeline_add(incident_id, "autofix", "No actionable tasks found in postmortem")
         return []
 
     # 4. Upload task plan to Box
@@ -77,11 +117,11 @@ def run(incident_id: str) -> list[str]:
     box_tools.upload_text(folder_id, "auto_fix_plan.md", plan_md)
     print(f"[auto_fix] Plan uploaded to Box")
 
-    # 5. Implement each task
+    # 5. Implement each task (limit to first 2 for demo speed)
     repo_path = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
     pr_urls = []
 
-    for task in tasks:
+    for task in tasks[:2]:
         task["alarm_name"] = alarm_name
         pr_url = implement_task(
             incident_id=incident_id,
@@ -111,7 +151,7 @@ def run(incident_id: str) -> list[str]:
     except Exception as e:
         print(f"[auto_fix] Review task creation failed: {e}")
 
-    timeline.add(
+    _timeline_add(
         incident_id, "autofix",
         f"Auto-fix complete: {len(pr_urls)} PRs created from {len(tasks)} tasks"
     )
@@ -129,15 +169,9 @@ def main():
     if len(sys.argv) > 1:
         iid = sys.argv[1]
     else:
-        # Try latest_open first (connect branch), fall back to latest (main branch)
-        rec = None
-        if hasattr(incidents, "latest_open"):
-            rec = incidents.latest_open()
-        if not rec and hasattr(incidents, "latest"):
-            rec = incidents.latest()
-        if not rec:
+        iid = _latest_incident_id()
+        if not iid:
             sys.exit("No incidents found. Pass an incident ID.")
-        iid = rec["incident_id"]
         print(f"[auto_fix] Using latest incident: {iid}")
 
     urls = run(iid)

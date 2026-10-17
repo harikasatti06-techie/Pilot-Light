@@ -11,9 +11,16 @@ from box_sdk_gen.schemas.ai_item_ask import AiItemAsk, AiItemAskTypeField
 
 from ..box_client import client
 from ..config import AWS_REGION, BOX_ENTERPRISE_ID, BOX_INCIDENTS_FOLDER_ID, TEXT_MODEL_ID
-from .. import timeline
 
-MODEL_ID = TEXT_MODEL_ID or "us.amazon.nova-2-lite-v1:0"
+
+def _timeline_add(incident_id: str, type_: str, text: str) -> None:
+    try:
+        from .. import timeline
+        timeline.add(incident_id, type_, text)
+    except Exception:
+        print(f"[auto_fix] [{type_}] {text}")
+
+MODEL_ID = TEXT_MODEL_ID or "amazon.nova-2-lite-v1:0"
 br = boto3.client("bedrock-runtime", region_name=AWS_REGION)
 
 EXTRACT_PROMPT = """You are a senior engineer. Read this incident analysis and extract
@@ -142,7 +149,7 @@ def extract_tasks(
         "causes? What specific permanent code fixes would prevent this incident from "
         "recurring? Be specific about files and changes needed.",
     )
-    timeline.add(incident_id, "autofix", "Box AI analysis complete")
+    _timeline_add(incident_id, "autofix", "Box AI analysis complete")
     if analysis["citations"]:
         cite_summary = "; ".join(c.get("name", "?") for c in analysis["citations"][:3])
         print(f"[auto_fix] Citations from: {cite_summary}")
@@ -155,7 +162,7 @@ def extract_tasks(
 
     # 5. Bedrock structured extraction
     tasks = _bedrock_extract(postmortem_text, transcript_text, analysis["answer"])
-    timeline.add(incident_id, "autofix", f"Extracted {len(tasks)} tasks from postmortem")
+    _timeline_add(incident_id, "autofix", f"Extracted {len(tasks)} tasks from postmortem")
     print(f"[auto_fix] Extracted {len(tasks)} tasks")
 
     return tasks, analysis

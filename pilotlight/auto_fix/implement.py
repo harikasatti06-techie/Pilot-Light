@@ -8,8 +8,16 @@ import re
 import subprocess
 from pathlib import Path
 
-from .. import box_tools, timeline
+from .. import box_tools
 from .prompt import AGENT_PROMPT
+
+
+def _timeline_add(incident_id: str, type_: str, text: str) -> None:
+    try:
+        from .. import timeline
+        timeline.add(incident_id, type_, text)
+    except Exception:
+        print(f"[auto_fix] [{type_}] {text}")
 
 
 def _run(cmd: list[str], cwd: str = None, check: bool = True) -> subprocess.CompletedProcess:
@@ -46,7 +54,7 @@ def implement_task(
     branch = f"auto-fix/{incident_id}/{task_id}".lower()
 
     print(f"\n[auto_fix] === Implementing {task_id}: {task_title} ===")
-    timeline.add(incident_id, "autofix", f"Starting implementation: {task_id} - {task_title}")
+    _timeline_add(incident_id, "autofix", f"Starting implementation: {task_id} - {task_title}")
 
     # 1. Create branch
     _run(["git", "checkout", "main"], cwd=repo_path, check=False)
@@ -72,8 +80,7 @@ def implement_task(
     prompt_file.write_text(prompt)
 
     result = subprocess.run(
-        ["claude", "--print", "--output-format", "text",
-         "--prompt", prompt],
+        ["claude", "-p", "--model", "us.anthropic.claude-sonnet-4-6", prompt],
         cwd=repo_path,
         capture_output=True,
         text=True,
@@ -89,7 +96,7 @@ def implement_task(
 
     if pr_url:
         print(f"[auto_fix] PR created: {pr_url}")
-        timeline.add(incident_id, "autofix", f"PR created for {task_id}: {pr_url}")
+        _timeline_add(incident_id, "autofix", f"PR created for {task_id}: {pr_url}")
 
         # Upload patch and results to Box
         try:
@@ -105,7 +112,7 @@ def implement_task(
     else:
         print(f"[auto_fix] No PR created for {task_id}")
         print(f"[auto_fix] Output tail: {output[-500:]}")
-        timeline.add(incident_id, "autofix", f"Implementation failed for {task_id}")
+        _timeline_add(incident_id, "autofix", f"Implementation failed for {task_id}")
 
         # Upload failure log to Box
         try:
