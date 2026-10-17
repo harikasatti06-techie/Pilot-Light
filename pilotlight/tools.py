@@ -23,7 +23,11 @@ def ask_runbook(incident_id: str, question: str) -> str:
 
 
 def get_briefing(incident_id: str) -> str:
-    """Spoken opening briefing for the on-call engineer. (P3) STUB"""
+    """Spoken opening briefing for the on-call engineer, read from the incident record."""
+    from . import incidents
+    rec = incidents.get(incident_id)
+    if rec and rec.get("briefing_text"):
+        return rec["briefing_text"]
     return "Checkout API error rate spiked at 10:02. The fail mode flag was changed three minutes earlier."
 
 
