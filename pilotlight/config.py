@@ -38,10 +38,12 @@ BOX_REVIEWER_LOGIN = os.getenv("BOX_REVIEWER_LOGIN", "")
 SONIC_MODEL_ID = os.getenv("SONIC_MODEL_ID", "amazon.nova-2-sonic-v1:0")
 TEXT_MODEL_ID = os.getenv("TEXT_MODEL_ID", "")
 
-TWILIO_ACCOUNT_SID = os.getenv("TWILIO_ACCOUNT_SID", "")
-TWILIO_AUTH_TOKEN = os.getenv("TWILIO_AUTH_TOKEN", "")
-TWILIO_FROM_NUMBER = os.getenv("TWILIO_FROM_NUMBER", "")
+CONNECT_INSTANCE_ID = os.getenv("CONNECT_INSTANCE_ID", "")
+CONNECT_CONTACT_FLOW_ID = os.getenv("CONNECT_CONTACT_FLOW_ID", "")
+CONNECT_SOURCE_PHONE = os.getenv("CONNECT_SOURCE_PHONE", "")
+CONNECT_QUEUE_ID = os.getenv("CONNECT_QUEUE_ID", "")
 ONCALL_PHONE = os.getenv("ONCALL_PHONE", "")
 PAGE_PHONE = os.getenv("PAGE_PHONE", "")
 
-VOICE_SERVER_URL = os.getenv("VOICE_SERVER_URL", "").rstrip("/")
+# Code-level check that the caller said "confirm" before a remediation runs. Never disable in production.
+REQUIRE_SPOKEN_CONFIRM = os.getenv("REQUIRE_SPOKEN_CONFIRM", "true").lower() != "false"
