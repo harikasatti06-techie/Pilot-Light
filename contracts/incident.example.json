@@ -1,0 +1,9 @@
+{
+  "incident_id": "INC-001",
+  "service": "checkout-api",
+  "alarm_name": "checkout-5xx-high",
+  "started_at": "2026-10-17T10:02:11Z",
+  "box_folder_id": "123456789",
+  "runbook_file_id": "987654321",
+  "oncall_phone": "+1206XXXXXXX"
+}
