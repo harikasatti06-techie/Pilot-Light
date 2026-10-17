@@ -1,0 +1,148 @@
+name: Pilot Light CI
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+  pull-requests: write
+
+env:
+  PYTHON_VERSION: "3.12"
+  AWS_REGION: us-east-1
+
+jobs:
+  # ─────────────────────────────────────────────
+  # Stage 1: Unit tests (fast, no credentials)
+  # ─────────────────────────────────────────────
+  unit-tests:
+    name: Unit Tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: pip
+
+      - name: Install dependencies
+        run: |
+          pip install -r requirements.txt
+          pip install pytest pytest-cov
+
+      - name: Run unit tests
+        run: |
+          pytest tests/unit/ -v --tb=short --co -q 2>/dev/null || true
+          pytest tests/unit/ -v --tb=short \
+            --junitxml=reports/unit-results.xml \
+            --cov=pilotlight --cov=services \
+            --cov-report=term-missing \
+            --cov-report=xml:reports/coverage.xml
+
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: unit-test-results
+          path: reports/
+
+  # ─────────────────────────────────────────────
+  # Stage 2: Integration tests (Box + AWS mocked)
+  # ─────────────────────────────────────────────
+  integration-tests:
+    name: Integration Tests
+    runs-on: ubuntu-latest
+    needs: unit-tests
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: pip
+
+      - name: Install dependencies
+        run: |
+          pip install -r requirements.txt
+          pip install pytest pytest-cov moto[dynamodb,ssm,logs,cloudwatch]
+
+      - name: Run integration tests
+        env:
+          BOX_CLIENT_ID: test
+          BOX_CLIENT_SECRET: test
+          BOX_ENTERPRISE_ID: test
+          GITHUB_REPO: test/test
+          GITHUB_TOKEN: test
+        run: |
+          pytest tests/integration/ -v --tb=short \
+            --junitxml=reports/integration-results.xml
+
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: integration-test-results
+          path: reports/
+
+  # ─────────────────────────────────────────────
+  # Stage 3: Evals (auto-fix quality checks)
+  # ─────────────────────────────────────────────
+  evals:
+    name: Auto-Fix Evals
+    runs-on: ubuntu-latest
+    needs: unit-tests
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: pip
+
+      - name: Install dependencies
+        run: |
+          pip install -r requirements.txt
+          pip install pytest
+
+      - name: Run eval checks
+        run: |
+          pytest tests/evals/ -v --tb=short \
+            --junitxml=reports/eval-results.xml
+
+      - name: Upload eval results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: eval-results
+          path: reports/
+
+  # ─────────────────────────────────────────────
+  # Gate: all checks must pass before merge
+  # ─────────────────────────────────────────────
+  ci-gate:
+    name: CI Gate
+    runs-on: ubuntu-latest
+    needs: [unit-tests, integration-tests, evals]
+    if: always()
+    steps:
+      - name: Check all jobs passed
+        run: |
+          if [[ "${{ needs.unit-tests.result }}" != "success" ]]; then
+            echo "Unit tests failed"
+            exit 1
+          fi
+          if [[ "${{ needs.integration-tests.result }}" != "success" ]]; then
+            echo "Integration tests failed"
+            exit 1
+          fi
+          if [[ "${{ needs.evals.result }}" != "success" ]]; then
+            echo "Evals failed"
+            exit 1
+          fi
+          echo "All checks passed"
