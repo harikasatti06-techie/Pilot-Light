@@ -1,0 +1,10 @@
+boto3
+box-sdk-gen
+fastapi
+uvicorn[standard]
+websockets
+twilio
+python-dotenv
+aws-sdk-bedrock-runtime   # Nova Sonic bidirectional streaming (boto3 does not support it)
+
+awscrt                    # duplex transport for the Nova Sonic stream

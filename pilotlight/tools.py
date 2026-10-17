@@ -4,43 +4,47 @@ Persons 1 and 3 replace the stub bodies with real implementations.
 Person 2 (voice agent) calls these. Every function returns short, speakable text.
 Keep the signatures unchanged.
 """
+from . import aws_tools, timeline
 
 
 def query_logs(incident_id: str, minutes: int = 15) -> str:
     """Summarize recent error logs for the incident's service. (P1)"""
-    return "In the last 15 minutes there were 212 five-hundred errors from checkout-api, mostly DynamoDB throttling and timeouts."
+    return aws_tools.query_logs(incident_id, minutes)
 
 
 def what_changed(incident_id: str, minutes: int = 60) -> str:
-    """Recent SSM parameter and CloudTrail changes. (P1)"""
-    return "Forty minutes ago the SSM parameter checkout slash db-mode was changed from normal to broken."
+    """Recent SSM parameter changes. (P1)"""
+    return aws_tools.what_changed(incident_id, minutes)
 
 
 def ask_runbook(incident_id: str, question: str) -> str:
-    """Box AI Q&A over the incident's runbook. (P3)"""
-    return "The runbook says to revert the db-mode parameter to normal, then watch the error rate for five minutes."
+    """Box AI Q&A over the incident's runbook, with a Bedrock fallback. (P3)"""
+    from . import box_tools
+    return box_tools.ask_runbook(incident_id, question)
 
 
 def get_briefing(incident_id: str) -> str:
-    """Spoken opening briefing for the on-call engineer. (P3)"""
-    return "Checkout API is returning high five-hundred errors. Severity is high. A recent config change is the likely cause."
+    """Spoken opening briefing for the on-call engineer, read from the incident record."""
+    from . import incidents
+    rec = incidents.get(incident_id)
+    if rec and rec.get("briefing_text"):
+        return rec["briefing_text"]
+    return "Checkout API error rate spiked at 10:02. The fail mode flag was changed three minutes earlier."
 
 
 def execute_remediation(incident_id: str, action: str, confirmed: bool) -> str:
     """Run an allowlisted SSM revert. Must refuse unless confirmed is True. (P1)"""
-    if not confirmed:
-        return "I need a verbal confirmation before I run that."
-    return f"Done. I ran {action}. Errors should drop within a minute."
+    return aws_tools.execute_remediation(incident_id, action, confirmed)
 
 
 def log_to_incident(incident_id: str, event_type: str, text: str) -> None:
-    """Write to the DynamoDB timeline and the Box incident folder.
+    """Write to the DynamoDB timeline.
 
-    event_type is one of: alarm, call, tool, action, note.
+    event_type is one of: alarm, briefing, call, user, agent, tool, action, postmortem.
     """
-    print(f"[{incident_id}] {event_type}: {text}")
+    timeline.add(incident_id, event_type, text)
 
 
 def page_teammate(incident_id: str, message: str) -> str:
-    """Page a second responder. First on the cut list. (P1)"""
+    """Page a second responder. First on the cut list. (P1) STUB"""
     return "I've paged a teammate."
