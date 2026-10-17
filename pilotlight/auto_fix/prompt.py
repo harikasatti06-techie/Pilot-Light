@@ -29,12 +29,9 @@ Follow these steps exactly:
 
 ### 1. Read incident artifacts
 
-Read the postmortem and call transcript that were placed in your workspace:
-
-- `/workspace/context/postmortem.md`
-- `/workspace/context/transcript.md`
-
-Understand the root cause, affected components, and the specific task you must fix.
+Check the samples/ directory or the repo root for postmortem.md and transcript.md. \
+Use the task description and the past fixes context above to understand the root \
+cause, affected components, and the specific task you must fix.
 
 ### 2. Read relevant source files
 
