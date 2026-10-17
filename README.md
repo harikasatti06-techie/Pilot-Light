@@ -189,10 +189,3 @@ Pre-flight checklist: flag off and alarm OK, traffic running, voice server and n
 ## Team
 
 Built by a four-person team: incident pipeline and integration, voice agent and telephony, Box integration and postmortem, and infrastructure and dashboard.
-
-## Hackathon rules
-
-- All code written during the hackathon
-- Public GitHub repository
-- Uses Box and AWS
-- Team of 2 to 4
