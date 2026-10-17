@@ -1,9 +1,11 @@
 {
-  "incident_id": "INC-001",
+  "incident_id": "INC-20261017-100211",
   "service": "checkout-api",
-  "alarm_name": "checkout-5xx-high",
+  "alarm_name": "pilotlight-checkout-5xx",
   "started_at": "2026-10-17T10:02:11Z",
+  "status": "open",
   "box_folder_id": "123456789",
   "runbook_file_id": "987654321",
+  "briefing_text": "Checkout API is failing...",
   "oncall_phone": "+1206XXXXXXX"
 }
