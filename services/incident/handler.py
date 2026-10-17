@@ -1,18 +1,19 @@
 """Incident Lambda. Invoked by EventBridge when the checkout alarm enters ALARM."""
 import datetime
-import json
-import urllib.request
 
-import boto3
+from pilotlight import aws_tools, box_tools, connect, incidents, timeline
+from pilotlight.config import ONCALL_PHONE
 
-from pilotlight import aws_tools, box_tools, timeline
-from pilotlight.config import INCIDENTS_TABLE, ONCALL_PHONE, VOICE_SERVER_URL
-
-incidents = boto3.resource("dynamodb").Table(INCIDENTS_TABLE)
+DEDUPE_MINUTES = 30  # an open incident older than this no longer suppresses a new one
 
 
 def handler(event, context):
     alarm = event["detail"]["alarmName"]
+    existing = incidents.latest_open(alarm, within_minutes=DEDUPE_MINUTES)
+    if existing:
+        timeline.add(existing["incident_id"], "alarm", f"{alarm} entered ALARM again, existing incident kept")
+        return {"incident_id": existing["incident_id"], "deduplicated": True}
+
     now = datetime.datetime.now(datetime.timezone.utc)
     iid = "INC-" + now.strftime("%Y%m%d-%H%M%S")
     timeline.add(iid, "alarm", f"{alarm} entered ALARM")
@@ -27,19 +28,20 @@ def handler(event, context):
     box_tools.write_briefing(folder_id, iid, briefing)
     timeline.add(iid, "briefing", briefing)
 
-    incidents.put_item(Item={
+    incidents.put({
         "incident_id": iid, "service": "checkout-api", "alarm_name": alarm,
         "started_at": now.strftime("%Y-%m-%dT%H:%M:%SZ"), "status": "open",
         "box_folder_id": folder_id, "runbook_file_id": runbook_id or "",
         "briefing_text": briefing, "oncall_phone": ONCALL_PHONE})
 
-    if VOICE_SERVER_URL:
-        req = urllib.request.Request(
-            f"{VOICE_SERVER_URL}/call", method="POST",
-            data=json.dumps({"incident_id": iid}).encode(),
-            headers={"Content-Type": "application/json"})
-        urllib.request.urlopen(req, timeout=10)
-        timeline.add(iid, "call", f"Calling on-call engineer ending in {ONCALL_PHONE[-4:]}")
-    else:
-        timeline.add(iid, "call", "VOICE_SERVER_URL not set, call skipped")
-    return {"incident_id": iid}
+    if not connect.configured():
+        timeline.add(iid, "call", "Amazon Connect not configured, call skipped")
+        return {"incident_id": iid}
+    try:
+        contact_id = connect.start_call(iid, briefing)
+    except Exception as e:  # the incident is already recorded; surface the failure on the timeline
+        timeline.add(iid, "call", f"Outbound call failed: {e}")
+        raise
+    incidents.update(iid, contact_id=contact_id)
+    timeline.add(iid, "call", f"Calling on-call engineer ending in {ONCALL_PHONE[-4:]} (contact {contact_id})")
+    return {"incident_id": iid, "contact_id": contact_id}

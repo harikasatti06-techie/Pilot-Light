@@ -9,8 +9,9 @@ from .config import AWS_REGION, TIMELINE_TABLE
 table = boto3.resource("dynamodb", region_name=AWS_REGION).Table(TIMELINE_TABLE)
 
 
-def add(incident_id: str, type_: str, text: str) -> None:
-    ts = datetime.datetime.now(datetime.timezone.utc).isoformat(timespec="milliseconds").replace("+00:00", "Z")
+def add(incident_id: str, type_: str, text: str, at: datetime.datetime | None = None) -> None:
+    at = at or datetime.datetime.now(datetime.timezone.utc)
+    ts = at.astimezone(datetime.timezone.utc).isoformat(timespec="milliseconds").replace("+00:00", "Z")
     table.put_item(Item={"incident_id": incident_id, "ts": ts, "type": type_, "text": text})
 
 

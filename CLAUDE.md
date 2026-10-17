@@ -28,38 +28,49 @@ Last updated: Fri Oct 16, 2026.
 - [x] `pilotlight/config.py`: env loading, `python-dotenv` optional so it imports inside Lambda
 - [x] `pilotlight/timeline.py`: `add`, `list_all` (paginated)
 - [x] `pilotlight/aws_tools.py`: real `query_logs`, `what_changed`, `execute_remediation` with `ALLOWED_ACTIONS`
-- [x] `pilotlight/tools.py`: P1 tools wired to `aws_tools`, `log_to_incident` writes to the timeline. `get_briefing`, `ask_runbook`, `page_teammate` are still stubs.
+- [x] `pilotlight/tools.py`: P1 tools wired to `aws_tools`, `log_to_incident` writes to the timeline, `get_briefing` reads `briefing_text` from the incident record. `ask_runbook`, `page_teammate` are still stubs.
 - [x] `pilotlight/box_tools.py`: **stubs** for `create_incident_folder`, `find_runbook`, `write_briefing`
 - [x] `services/checkout/handler.py`: fails with PaymentTimeout while `fail_mode` is `on`, emits a 1-second-resolution metric
-- [x] `services/incident/handler.py`: alarm → what_changed + query_logs → briefing → incident record + timeline. Skips `/call` while `VOICE_SERVER_URL` is empty.
+- [x] `services/incident/handler.py`: alarm → what_changed + query_logs → briefing → incident record + timeline → Connect outbound call (`contact_id` saved on the incident). Skips the call while `CONNECT_*` is unset. Dedupes: no new incident while one for the same alarm is open and under 30 minutes old.
 - [x] `infra/` CDK stack `PilotLight`: SSM param, both tables, checkout Lambda + HTTP API, 10s alarm, `PilotLight` dashboard, Incident Lambda with scoped IAM, EventBridge rule. `cdk synth` passes.
 - [x] `scripts/`: `traffic.sh`, `break.sh`, `fix.sh`, `force_alarm.sh`, `status.sh`
 - [x] Pushed to `main` (commit `b184c93`)
+- [x] Branch `feature/connect-nova-sonic`: Amazon Connect + Nova Sonic voice path (see `connect/SETUP.md`)
+  - `pilotlight/connect.py`: `start_call`, AI agent session lookup, `set_session_data`, `transcript`, `caller_confirmed`
+  - `pilotlight/incidents.py`: incident record helpers (`get`, `put`, `update`, `latest_open`, `by_contact`)
+  - `services/tools/`: AgentCore Gateway Lambda target. Dispatches five tools, enforces the code-level confirm check against the live transcript (fails closed)
+  - `services/session/`: flow Lambda, puts `incident_id` and `briefing` into the AI agent session (`{{$.Custom.*}}`)
+  - `services/hangup/`: on contact DISCONNECTED, transcript to timeline as `user`/`agent` rows, incident `closed`
+  - `infra/stack.py`: `build_asset(service)`, Lambdas `pilotlight-tools`, `pilotlight-session`, `pilotlight-hangup`, role `pilotlight-gateway`, rule `pilotlight-call-ended`, Connect IAM scoped to the instance. Synth verified with aws-cdk-lib 2.273.0.
+  - `connect/`: `SETUP.md` (console steps), `agent_prompt.md`, `tool_schema.json`
+  - `scripts/connect_setup.py` (gateway, target, Lambda association), `scripts/test_call.py`
+  - Mocked handler tests pass. Nothing deployed or called against real AWS yet.
 
 ### Not done (in order)
 - [ ] `aws login` by Zain (interactive), `cdk bootstrap`, `cdk deploy`
 - [ ] Test: traffic → break → alarm ALARM within ~30s → `status.sh` shows incident and timeline rows → fix → alarm OK
 - [ ] Box: `box_client.py`, `scripts/box_setup.py`, real `box_tools.py`, `runbooks/checkout-5xx.md` (needs P3's credentials)
-- [ ] Incident Lambda dependencies: once `box_tools` imports `box_sdk_gen`, `build_incident_asset()` in `infra/stack.py` must also `pip install box-sdk-gen` into `build/incident/`
-- [ ] Voice: `voice/sonic.py`, `voice/prompt.py`, `voice/audio.py`, `voice/server.py` (terminal mic first, then phone)
-- [ ] `pilotlight/postmortem.py`, wired to hang-up
-- [ ] Idempotency: skip creating a new incident if one is already open for the same alarm (promised in the README)
-- [ ] Code-level confirm check in the voice server (promised in the README)
+- [ ] Incident Lambda dependencies: once `box_tools` imports `box_sdk_gen`, `build_asset()` in `infra/stack.py` must also `pip install box-sdk-gen` into `build/incident/` and `build/hangup/`
+- [ ] Connect (P2): instance with Connect Customer + outbound calling, phone number, then `connect/SETUP.md` steps 3 to 11. Put `CONNECT_*` in `.env`, redeploy, `scripts/test_call.py`
+- [ ] Verify on a real call: AI agent session exists on the contact (session Lambda timeline row), tools reach `pilotlight-tools`, `ListMessages` returns the caller's "confirm" before the tool call (else tune `caller_confirmed` retries)
+- [ ] `pilotlight/postmortem.py`, called from `services/hangup/handler.py`; also write `transcript.md` to Box there
 - [ ] Stretch: timeline page. README services list and architecture are already written.
 
 ## 4. Decisions already made (do not reopen)
 
 - **Names follow the build plan:** SSM `/pilotlight/checkout/fail_mode`, alarm `pilotlight-checkout-5xx`, tables `pilotlight-timeline` and `pilotlight-incidents`, stack `PilotLight`, functions `pilotlight-checkout` and `pilotlight-incident`. The older `db-mode` and `checkout-5xx-high` names are retired.
-- **Region** `us-east-1`. **Python 3.12** everywhere (the voice server needs `audioop`).
-- **Lambda packaging:** `infra/stack.py` copies `services/incident/` and `pilotlight/` into `build/incident/` at synth time. No Docker bundling. `build/` is gitignored.
-- **Incident Lambda env** is read from the repo `.env` at synth time (`PASSTHROUGH_ENV` in `infra/stack.py`). After changing `.env` (for example a new ngrok URL), run `cdk deploy` again.
+- **Region** `us-east-1`. **Python 3.12** everywhere.
+- **Lambda packaging:** `infra/stack.py` copies `services/<name>/` and `pilotlight/` into `build/<name>/` at synth time. No Docker bundling. `build/` is gitignored.
+- **Incident Lambda env** is read from the repo `.env` at synth time (`PASSTHROUGH_ENV` in `infra/stack.py`). After changing `.env` (for example `CONNECT_CONTACT_FLOW_ID`), run `cdk deploy` again.
 - **No retries** on the Incident Lambda (`retry_attempts=0` on both the function and the rule target), so one alarm never places two calls.
 - **`what_changed`** pages through all SSM history and speaks the time in Pacific time.
+- **Telephony: Amazon Connect, native.** Nova Sonic runs inside Connect as the speech-to-speech model of a Conversational AI bot, with an orchestrator AI agent (copy of `SelfServiceOrchestrator`). Tools reach `pilotlight/tools.py` over MCP: AgentCore Gateway `pilotlight-tools`, Lambda target `pilotlight` (tool names `pilotlight___<tool>`). No voice server, no ngrok, no Twilio. `VOICE_SERVER_URL` and `TWILIO_*` are retired.
+- **Confirm check** lives in `services/tools/handler.py`: `confirmed=True` only if the latest CUSTOMER message from `qconnect.list_messages` contains "confirm" without a negation. `REQUIRE_SPOKEN_CONFIRM=false` is an emergency demo switch only.
+- **Incident lifecycle:** `open` at alarm, `closed` at hang-up.
 - **Alarm** fires on `PilotLight/CheckoutErrors`, Sum over 10s, threshold 3, missing data not breaching.
 
 ## 5. Open decisions
 
-- **Telephony: Twilio or Amazon Connect.** The build plan specifies Twilio Media Streams. `README.md` says Amazon Connect. Confirm with Zain before writing `voice/server.py`.
 - **Box AI Q&A** availability on the developer account. If disabled, `ask_runbook` uses Bedrock over the runbook text.
 - **Text model ID** for the postmortem (P2 to confirm in the Bedrock playground).
 
@@ -75,6 +86,9 @@ scripts/break.sh          # fail_mode on
 scripts/status.sh         # flag, alarm state, latest incident timeline
 scripts/fix.sh            # fail_mode off
 scripts/force_alarm.sh    # only fires if the alarm is not already in ALARM; run fix.sh and wait for OK first
+
+python scripts/connect_setup.py   # after cdk deploy: AgentCore Gateway + target, Lambda association (idempotent)
+python scripts/test_call.py       # ring ONCALL_PHONE with a test incident, checkout untouched
 ```
 
 ## 7. Rules

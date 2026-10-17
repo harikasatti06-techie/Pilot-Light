@@ -4,7 +4,7 @@ Persons 1 and 3 replace the stub bodies with real implementations.
 Person 2 (voice agent) calls these. Every function returns short, speakable text.
 Keep the signatures unchanged.
 """
-from . import aws_tools, timeline
+from . import aws_tools, incidents, timeline
 
 
 def query_logs(incident_id: str, minutes: int = 15) -> str:
@@ -23,8 +23,9 @@ def ask_runbook(incident_id: str, question: str) -> str:
 
 
 def get_briefing(incident_id: str) -> str:
-    """Spoken opening briefing for the on-call engineer. (P3) STUB"""
-    return "Checkout API error rate spiked at 10:02. The fail mode flag was changed three minutes earlier."
+    """Spoken opening briefing for the on-call engineer, as written by the Incident Lambda."""
+    item = incidents.get(incident_id)
+    return item["briefing_text"] if item else "I could not find a briefing for that incident."
 
 
 def execute_remediation(incident_id: str, action: str, confirmed: bool) -> str:
