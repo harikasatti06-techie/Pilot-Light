@@ -48,6 +48,7 @@ async def main(iid: str, url: str, out: str) -> None:
                 m = json.loads(raw)
                 counts[m["event"]] = counts.get(m["event"], 0) + 1
                 if m["event"] == "mark":  # Twilio echoes a mark once the audio before it has played
+                    state["hangup_mark"] = time.time()
                     await ws.send(json.dumps(m))
                 if m["event"] == "media":
                     received.extend(base64.b64decode(m["media"]["payload"]))
@@ -86,6 +87,11 @@ async def main(iid: str, url: str, out: str) -> None:
             await wait_for_agent(asked)
             first = state["turn_first"]
             print(f"asked {text!r}: " + (f"first agent audio {first - asked:.2f}s after question ended" if first else "NO AUDIO"))
+        # Like a real line, stay connected until the server hangs up (goodbye mark) or 15s pass
+        waited = time.time()
+        while "hangup_mark" not in state and time.time() - waited < 15:
+            await stream(b"", 0.2)
+        print("server hung up after goodbye" if "hangup_mark" in state else "server did not hang up within 15s")
         await ws.send(json.dumps({"event": "stop", "streamSid": "MZfake"}))
         await asyncio.sleep(0.5)
         rtask.cancel()

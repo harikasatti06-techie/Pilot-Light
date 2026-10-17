@@ -3,6 +3,7 @@ import asyncio
 import base64
 import json
 import uuid
+from collections import deque
 from typing import Awaitable, Callable
 
 import boto3
@@ -23,7 +24,10 @@ from . import prompt
 
 OUT_RATE = 8000  # Twilio's rate, so no resampling on the way out
 VOICE_ID = "matthew"
-END_CALL_QUIET_SECONDS = 1.5  # model audio has stopped for this long, so the goodbye is fully generated
+END_CALL_QUIET_SECONDS = 1.5
+MAX_RECONNECTS = 3
+RECONNECT_KICKOFF = ("The audio connection dropped and is back. Say only: Sorry, I lost you for a second. "
+                     "Then continue the conversation where it left off.")  # model audio has stopped for this long, so the goodbye is fully generated
 
 END_CALL_SPEC = {"toolSpec": {
     "name": "end_call",
@@ -54,6 +58,11 @@ class SonicSession:
         self.incident_id = incident_id
         self.on_audio, self.on_interrupt, self.on_end = on_audio, on_interrupt, on_end
         self._last_audio = 0.0
+        self._ready = False
+        self._reconnecting = False
+        self._ending = False
+        self._reconnects = 0
+        self._sent: deque[str] = deque(maxlen=12)  # recent outbound event summaries, printed on stream errors
         self.transcript: list[str] = []
         self.last_user = ""
         self.closed = False
@@ -64,6 +73,11 @@ class SonicSession:
         self._tool_runner.incident_id = incident_id
 
     async def _send(self, event: dict) -> None:
+        kind = next(iter(event))
+        if kind != "audioInput":
+            self._sent.append(f"{kind}:{json.dumps(event[kind])[:160]}")
+        elif not self._sent or not self._sent[-1].startswith("audioInput"):
+            self._sent.append("audioInput")
         async with self._send_lock:
             await self._stream.input_stream.send(InvokeModelWithBidirectionalStreamInputChunk(
                 value=BidirectionalInputPayloadPart(bytes_=json.dumps({"event": event}).encode())))
@@ -77,6 +91,12 @@ class SonicSession:
         await self._send({"contentEnd": {"promptName": self._prompt, "contentName": name}})
 
     async def start(self) -> None:
+        await self._open(prompt.build(self.incident_id), prompt.KICKOFF)
+        timeline.add(self.incident_id, "call", "Call connected, voice agent started")
+
+    async def _open(self, system_prompt: str, kickoff: str) -> None:
+        self._ready = False
+        self._prompt, self._audio = str(uuid.uuid4()), str(uuid.uuid4())
         cfg = await AsyncBedrockRuntimeConfig.resolve(
             region=SONIC_REGION, aws_credentials_identity_resolver=_ProfileCredentials(), transport=AWSCRTHTTPClient())
         client = AsyncBedrockRuntimeClient(config=cfg)
@@ -91,20 +111,23 @@ class SonicSession:
                                          "audioType": "SPEECH"},
             "toolUseOutputConfiguration": {"mediaType": "application/json"},
             "toolConfiguration": {"tools": _sonic_tools()}}})
-        await self._text("SYSTEM", prompt.build(self.incident_id), interactive=False)
-        self._reader = asyncio.create_task(self._read())
+        await self._text("SYSTEM", system_prompt, interactive=False)
+        self._reader = asyncio.create_task(self._read(self._stream))
         await self._send({"contentStart": {"promptName": self._prompt, "contentName": self._audio, "type": "AUDIO",
                           "interactive": True, "role": "USER",
                           "audioInputConfiguration": {"mediaType": "audio/lpcm", "sampleRateHertz": 16000,
                                                       "sampleSizeBits": 16, "channelCount": 1,
                                                       "audioType": "SPEECH", "encoding": "base64"}}})
-        await self._text("USER", prompt.KICKOFF, interactive=True)  # the agent speaks first
-        timeline.add(self.incident_id, "call", "Call connected, voice agent started")
+        await self._text("USER", kickoff, interactive=True)  # the agent speaks first
+        self._ready = True
 
     async def send_audio(self, pcm_16k: bytes) -> None:
-        if not self.closed:
-            await self._send({"audioInput": {"promptName": self._prompt, "contentName": self._audio,
-                                             "content": base64.b64encode(pcm_16k).decode()}})
+        if not self.closed and self._ready:
+            try:
+                await self._send({"audioInput": {"promptName": self._prompt, "contentName": self._audio,
+                                                 "content": base64.b64encode(pcm_16k).decode()}})
+            except Exception as e:
+                self._trigger_reconnect(f"send failed: {e}")
 
     async def close(self) -> None:
         if self.closed:
@@ -122,14 +145,14 @@ class SonicSession:
         except Exception:
             self._reader.cancel()
 
-    async def _read(self) -> None:
-        _, out = await self._stream.await_output()
+    async def _read(self, stream) -> None:
+        _, out = await stream.await_output()
         while True:
             try:
                 r = await out.receive()
             except Exception as e:
-                if not self.closed:
-                    print(f"[sonic] stream error: {e}")
+                if not self.closed and stream is self._stream:
+                    self._trigger_reconnect(str(e))
                 return
             if r is None:
                 return
@@ -154,7 +177,7 @@ class SonicSession:
                     await self.on_interrupt()
                 return
             if role == "USER":
-                if text.strip() == prompt.KICKOFF:
+                if text.strip() in (prompt.KICKOFF, RECONNECT_KICKOFF):
                     return
                 self.last_user = text
                 self.transcript.append(f"Engineer: {text}")
@@ -162,6 +185,8 @@ class SonicSession:
             elif role == "ASSISTANT" and self._stages.get(body.get("contentId", ""), "FINAL") == "FINAL":
                 text = _speakable(text)
                 self.transcript.append(f"Pilot Light: {text}")
+                if "goodbye" in text.lower():  # backstop when the model says goodbye without calling end_call
+                    asyncio.create_task(self._end_when_quiet(0.0))
                 await asyncio.to_thread(timeline.add, self.incident_id, "agent", text)
         elif kind == "toolUse":
             asyncio.create_task(self._tool(body))
@@ -169,8 +194,8 @@ class SonicSession:
     async def _tool(self, body: dict) -> None:
         name, args = body.get("toolName", ""), json.loads(body.get("content") or "{}")
         if name == "end_call":
-            result = "Ending the call now."
-            asyncio.create_task(self._end_when_quiet())
+            result = "The line will close after you speak. Now say one short goodbye sentence to the engineer."
+            asyncio.create_task(self._end_when_quiet(asyncio.get_running_loop().time()))
         else:
             # Code-level confirm gate: _run_tool checks the latest engineer transcript for "confirm"
             self._tool_runner._last_user = self.last_user
@@ -184,13 +209,45 @@ class SonicSession:
                                          "content": json.dumps({"result": result})}})
         await self._send({"contentEnd": {"promptName": self._prompt, "contentName": content}})
 
-    async def _end_when_quiet(self) -> None:
-        """Wait until the goodbye has finished generating, then hand off to the caller to hang up."""
+    async def _end_when_quiet(self, called_at: float) -> None:
+        """Wait for the goodbye spoken after the tool call to finish generating, then hand off to hang up."""
+        if self._ending:
+            return
+        self._ending = True
         loop = asyncio.get_running_loop()
-        deadline = loop.time() + 15
-        await asyncio.sleep(1.0)
+        called_at = called_at or loop.time() - 1  # goodbye already spoken: only wait for quiet
+        deadline = called_at + 15
+        while self._last_audio <= called_at and loop.time() < called_at + 6:  # goodbye has not started yet
+            await asyncio.sleep(0.1)
         while loop.time() - self._last_audio < END_CALL_QUIET_SECONDS and loop.time() < deadline:
             await asyncio.sleep(0.25)
         await asyncio.to_thread(timeline.add, self.incident_id, "call", "Agent ended the call")
         if self.on_end:
             await self.on_end()
+
+    def _trigger_reconnect(self, reason: str) -> None:
+        """Start exactly one reconnect, whichever of the reader or sender notices the failure first."""
+        if self._reconnecting or self.closed:
+            return
+        self._reconnecting, self._ready = True, False
+        print(f"[sonic] stream error: {reason}")
+        print("[sonic] last events sent: " + " | ".join(self._sent))
+        asyncio.create_task(self._reconnect(reason))
+
+    async def _reconnect(self, reason: str) -> None:
+        """Open a fresh Sonic session on the same call, carrying the conversation so far."""
+        if self._reconnects >= MAX_RECONNECTS or self.closed:
+            await asyncio.to_thread(timeline.add, self.incident_id, "call", f"Voice session lost: {reason}")
+            return
+        self._reconnects += 1
+        await asyncio.to_thread(timeline.add, self.incident_id, "call",
+                                f"Voice session dropped ({reason}), reconnecting ({self._reconnects}/{MAX_RECONNECTS})")
+        history = "\n".join(self.transcript[-12:]) or "(nothing said yet)"
+        system = prompt.build(self.incident_id) + f"\n\nConversation so far on this call:\n{history}"
+        try:
+            await self._open(system, RECONNECT_KICKOFF)
+            self._reconnecting = False
+        self._ending = False
+        except Exception as e:
+            print(f"[sonic] reconnect failed: {e}")
+            await self._reconnect(f"reconnect failed: {e}")
