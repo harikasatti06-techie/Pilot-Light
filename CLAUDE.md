@@ -62,6 +62,7 @@ Last updated: Fri Oct 16, 2026, 11:10pm.
 - [x] Goodbye fix (untested): server waits for goodbye audio spoken after `end_call`, plus a backstop that hangs up after any agent line containing "goodbye". **Not verified** (last test did not run). Safe demo fallback: Zain hangs up after the goodbye.
 - [x] Sonic auto-reconnect: on stream error, reopen a session on the same call with the transcript so far ("Sorry, I lost you for a second"), max 3; logs the last events sent. Forced-drop test passed. Cause of the 12:36am live crash ("Invalid input request" after the briefing) still unknown; the logging will capture it if it recurs.
 - Zain confirmed the second live call (12:27am) worked as expected. **Zain's budget is limited: do not run test calls or fake calls without explicit approval.**
+- [x] `dashboard/`: operator console (`uvicorn dashboard.app:app --port 8001`). Login (`DASHBOARD_USER`/`DASHBOARD_PASSWORD`, signed cookie), Overview (alarm, flag, open incidents, error chart), Incidents with timeline, Events feed (checkout errors and config changes), Links (CloudWatch log groups, Live Tail, Logs Insights, CloudTrail, Bedrock, Box, Twilio). Read-only. Sidebar lists planned sections marked Soon. Tested with a local state dir; the CloudWatch-backed views (Events, incident timeline) are not yet run against AWS.
 - [ ] Code-level confirm check in the voice server (promised in the README)
 - [ ] Projector view: CloudWatch Logs Live Tail on `/pilotlight/checkout` replaces the blocked metrics dashboard. Optional: metric filter graph (filter creation is allowed, graph read untested)
 - [ ] README architecture diagram still shows the serverless design; update during the Sat 11:30 README pass
@@ -95,6 +96,7 @@ scripts/break.sh          # fail_mode on
 scripts/status.sh         # flag, alarm state, latest incident timeline
 scripts/fix.sh            # fail_mode off
 scripts/force_alarm.sh    # watcher opens an incident on its next poll if the alarm is OK
+uvicorn dashboard.app:app --port 8001   # operator dashboard, http://localhost:8001
 ```
 
 ## 8. Rules

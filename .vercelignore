@@ -1,0 +1,13 @@
+.env
+.env.*
+!.env.example
+.state/
+.venv/
+__pycache__/
+*.wav
+*.png
+build/
+voice/
+services/
+scripts/
+runbooks/

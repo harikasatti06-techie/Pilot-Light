@@ -1,0 +1,317 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Pilot Light</title>
+<style>
+  :root {
+    --bg: #0f1115; --panel: #171a21; --panel-2: #1e222b; --line: #2a2f3a;
+    --text: #e6e8ec; --muted: #8b93a3; --accent: #ff7a1a; --accent-soft: rgba(255,122,26,.14);
+    --ok: #3ccf8e; --bad: #ff4d5e; --warn: #f5b942; --info: #5aa9ff;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--text); font: 14px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif; }
+  a { color: var(--info); text-decoration: none; }
+  a:hover { text-decoration: underline; }
+  button { font: inherit; cursor: pointer; }
+  .hidden { display: none !important; }
+  .mono { font-family: ui-monospace, "SF Mono", Consolas, monospace; font-size: 12.5px; }
+  .muted { color: var(--muted); }
+
+  /* Login */
+  #login { min-height: 100vh; display: grid; place-items: center; padding: 16px; }
+  .login-card { width: 100%; max-width: 380px; background: var(--panel); border: 1px solid var(--line); border-radius: 14px; padding: 32px; }
+  .brand { display: flex; align-items: center; gap: 10px; font-weight: 700; font-size: 18px; }
+  .flame { width: 28px; height: 28px; border-radius: 8px; background: radial-gradient(circle at 50% 70%, #ffd166, var(--accent) 60%, #c2410c); }
+  .login-card p { margin: 8px 0 24px; }
+  label { display: block; font-size: 12px; color: var(--muted); margin: 14px 0 6px; }
+  input { width: 100%; padding: 10px 12px; border-radius: 8px; border: 1px solid var(--line); background: var(--bg); color: var(--text); font: inherit; }
+  input:focus { outline: 2px solid var(--accent); border-color: transparent; }
+  .btn { width: 100%; margin-top: 22px; padding: 10px; border: 0; border-radius: 8px; background: var(--accent); color: #111; font-weight: 600; }
+  .error { color: var(--bad); font-size: 13px; margin-top: 12px; min-height: 18px; }
+
+  /* Shell */
+  #app { display: grid; grid-template-columns: 240px 1fr; min-height: 100vh; }
+  nav { background: var(--panel); border-right: 1px solid var(--line); padding: 18px 12px; display: flex; flex-direction: column; gap: 2px; position: sticky; top: 0; height: 100vh; overflow-y: auto; }
+  nav .brand { padding: 4px 10px 18px; }
+  .nav-group { font-size: 11px; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); padding: 16px 10px 6px; }
+  .nav-item { display: flex; justify-content: space-between; align-items: center; padding: 8px 10px; border-radius: 8px; color: var(--text); background: none; border: 0; text-align: left; width: 100%; }
+  .nav-item:hover { background: var(--panel-2); }
+  .nav-item.active { background: var(--accent-soft); color: var(--accent); }
+  .nav-item.planned { color: var(--muted); }
+  .soon { font-size: 10px; padding: 1px 6px; border-radius: 99px; border: 1px solid var(--line); color: var(--muted); }
+  .nav-foot { margin-top: auto; padding: 14px 10px 0; border-top: 1px solid var(--line); font-size: 13px; display: flex; justify-content: space-between; align-items: center; }
+  .link-btn { background: none; border: 0; color: var(--info); padding: 0; }
+  main { padding: 28px 32px; min-width: 0; }
+  h1 { font-size: 22px; margin: 0 0 4px; }
+  h2 { font-size: 15px; margin: 0 0 12px; }
+  .sub { color: var(--muted); margin: 0 0 24px; }
+
+  .grid { display: grid; gap: 16px; }
+  .cards { grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); margin-bottom: 16px; }
+  .card { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 18px; min-width: 0; }
+  .stat-label { font-size: 12px; color: var(--muted); }
+  .stat { font-size: 26px; font-weight: 700; margin-top: 4px; }
+  .pill { display: inline-block; padding: 2px 10px; border-radius: 99px; font-size: 12px; font-weight: 600; }
+  .pill.ok { background: rgba(60,207,142,.15); color: var(--ok); }
+  .pill.bad { background: rgba(255,77,94,.15); color: var(--bad); }
+  .pill.warn { background: rgba(245,185,66,.15); color: var(--warn); }
+  .pill.info { background: rgba(90,169,255,.15); color: var(--info); }
+
+  .bars { display: flex; align-items: flex-end; gap: 3px; height: 120px; padding-top: 8px; }
+  .bar { flex: 1; background: var(--bad); border-radius: 3px 3px 0 0; min-height: 2px; opacity: .85; }
+  .bar.zero { background: var(--line); }
+  .axis { display: flex; justify-content: space-between; font-size: 11px; color: var(--muted); margin-top: 6px; }
+
+  table { width: 100%; border-collapse: collapse; }
+  th, td { text-align: left; padding: 10px 12px; border-bottom: 1px solid var(--line); vertical-align: top; }
+  th { font-size: 12px; color: var(--muted); font-weight: 500; }
+  tr.click { cursor: pointer; }
+  tr.click:hover td { background: var(--panel-2); }
+  .table-wrap { overflow-x: auto; }
+
+  .feed { list-style: none; margin: 0; padding: 0; max-height: 420px; overflow-y: auto; }
+  .feed li { display: grid; grid-template-columns: 82px 64px 1fr; gap: 10px; padding: 8px 0; border-bottom: 1px solid var(--line); }
+  .timeline { list-style: none; margin: 0; padding: 0; }
+  .timeline li { display: grid; grid-template-columns: 90px 90px 1fr; gap: 12px; padding: 10px 0; border-bottom: 1px solid var(--line); }
+  .t-type { font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: .04em; }
+  .t-alarm { color: var(--bad); } .t-briefing { color: var(--warn); } .t-user { color: var(--info); }
+  .t-agent { color: var(--accent); } .t-tool, .t-call { color: var(--muted); } .t-fix, .t-remediation { color: var(--ok); }
+
+  .links { grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); }
+  .link-row { display: block; padding: 10px 0; border-bottom: 1px solid var(--line); }
+  .link-row:last-child { border-bottom: 0; }
+  .link-row .muted { display: block; font-size: 12px; }
+  .back { margin-bottom: 16px; display: inline-block; }
+  .planned-box ul { margin: 8px 0 0; padding-left: 20px; }
+  .planned-box li { margin: 6px 0; }
+  .empty { color: var(--muted); padding: 20px 0; }
+
+  @media (max-width: 760px) {
+    #app { grid-template-columns: 1fr; }
+    nav { position: static; height: auto; flex-direction: row; flex-wrap: wrap; padding: 12px 16px; }
+    nav .brand { width: 100%; padding-bottom: 8px; }
+    .nav-group, .nav-item.planned { display: none; }
+    .nav-item { width: auto; }
+    .nav-foot { width: 100%; margin-top: 8px; }
+    main { padding: 20px 16px; }
+    .feed li, .timeline li { grid-template-columns: 70px 1fr; }
+    .feed li > :last-child, .timeline li > :last-child { grid-column: 1 / -1; }
+  }
+</style>
+</head>
+<body>
+
+<section id="login" class="hidden">
+  <form class="login-card" id="login-form">
+    <div class="brand"><div class="flame"></div>Pilot Light</div>
+    <p class="muted">Sign in to the incident console.</p>
+    <label for="username">Username</label>
+    <input id="username" autocomplete="username" required>
+    <label for="password">Password</label>
+    <input id="password" type="password" autocomplete="current-password" required>
+    <button class="btn" type="submit">Sign in</button>
+    <div class="error" id="login-error"></div>
+  </form>
+</section>
+
+<section id="app" class="hidden">
+  <nav id="nav"></nav>
+  <main id="view"></main>
+</section>
+
+<script>
+// Built sections render live data; planned sections describe what they will hold.
+const NAV = [
+  { group: "Operate", items: [
+    { id: "overview", label: "Overview" },
+    { id: "incidents", label: "Incidents" },
+    { id: "events", label: "Events" },
+    { id: "links", label: "Links" },
+  ]},
+  { group: "Respond", items: [
+    { id: "oncall", label: "On-call schedule", planned: ["Rotations and escalation chains per service", "Override shifts and swap requests", "Who gets called first, second, and the manager fallback"] },
+    { id: "calls", label: "Calls", planned: ["Every voice call with duration, outcome, and who answered", "Full transcript with agent tool calls inline", "Audio playback of the call recording"] },
+    { id: "remediations", label: "Remediations", planned: ["The allowlist of fixes the agent may run", "History of every executed fix: who confirmed, when, result", "Dry-run and approval rules per action"] },
+    { id: "runbooks", label: "Runbooks", planned: ["Runbooks in Box mapped to alarms by metadata", "Ask a runbook a question (Box AI) from the browser", "Coverage: alarms without a runbook"] },
+  ]},
+  { group: "Learn", items: [
+    { id: "postmortems", label: "Postmortems", planned: ["Drafted postmortems with Box review task status", "Action items extracted and tracked to done", "Search across past incidents"] },
+    { id: "analytics", label: "Analytics", planned: ["MTTA and MTTR per service and per week", "Time from alarm to call to fix", "Most frequent alarms and noisy services"] },
+  ]},
+  { group: "Configure", items: [
+    { id: "services", label: "Services", planned: ["Service catalog with owners and dependencies", "Health and alarm rules per service", "Feature flags and recent config changes"] },
+    { id: "alarms", label: "Alarm rules", planned: ["Edit thresholds and windows (today: 3 errors in 10s)", "Silence and maintenance windows", "Test an alarm without paging anyone"] },
+    { id: "integrations", label: "Integrations", planned: ["AWS, Box, Twilio, Bedrock connection status", "Slack and Teams incident channels", "PagerDuty, Jira, and GitHub hooks"] },
+    { id: "team", label: "Team and access", planned: ["Users, roles, and SSO sign-in", "Phone numbers and notification preferences", "Audit log of dashboard actions"] },
+    { id: "settings", label: "Settings", planned: ["Voice, language, and agent persona", "Data retention for logs and transcripts", "API keys and webhooks"] },
+  ]},
+];
+
+const $ = (s) => document.querySelector(s);
+const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+const time = (ts) => new Date(ts).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit" });
+const dateTime = (ts) => new Date(ts).toLocaleString([], { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" });
+let user = null, timer = null;
+
+async function api(path, opts = {}) {
+  const r = await fetch(path, { headers: { "Content-Type": "application/json" }, credentials: "same-origin", ...opts });
+  if (r.status === 401) { showLogin(); throw new Error("signed out"); }
+  if (!r.ok) throw new Error((await r.json().catch(() => ({}))).detail || r.statusText);
+  return r.json();
+}
+
+function showLogin() {
+  clearInterval(timer);
+  $("#app").classList.add("hidden");
+  $("#login").classList.remove("hidden");
+  $("#username").focus();
+}
+
+$("#login-form").addEventListener("submit", async (e) => {
+  e.preventDefault();
+  $("#login-error").textContent = "";
+  const r = await fetch("/api/login", { method: "POST", headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ username: $("#username").value, password: $("#password").value }) });
+  if (!r.ok) { $("#login-error").textContent = "Invalid username or password."; return; }
+  user = (await r.json()).user;
+  $("#password").value = "";
+  start();
+});
+
+function renderNav(active) {
+  const groups = NAV.map((g) => `<div class="nav-group">${g.group}</div>` + g.items.map((i) =>
+    `<button class="nav-item ${i.planned ? "planned" : ""} ${i.id === active ? "active" : ""}" data-id="${i.id}">
+       <span>${i.label}</span>${i.planned ? '<span class="soon">Soon</span>' : ""}</button>`).join("")).join("");
+  $("#nav").innerHTML = `<div class="brand"><div class="flame"></div>Pilot Light</div>${groups}
+    <div class="nav-foot"><span class="muted">${esc(user)}</span><button class="link-btn" id="logout">Sign out</button></div>`;
+  $("#nav").querySelectorAll(".nav-item").forEach((b) => b.onclick = () => { location.hash = b.dataset.id; });
+  $("#logout").onclick = async () => { await fetch("/api/logout", { method: "POST" }); user = null; showLogin(); };
+}
+
+function route() {
+  clearInterval(timer);
+  const [id, arg] = (location.hash.slice(1) || "overview").split("/");
+  renderNav(id);
+  const views = { overview, incidents, events, links };
+  const planned = NAV.flatMap((g) => g.items).find((i) => i.id === id && i.planned);
+  if (planned) return plannedView(planned);
+  if (id === "incidents" && arg) return incidentDetail(decodeURIComponent(arg));
+  const fn = views[id] || overview;
+  const run = () => fn().catch((e) => { if (e.message !== "signed out") $("#view").innerHTML = `<div class="error">${esc(e.message)}</div>`; });
+  run();
+  if (id === "overview" || id === "events") timer = setInterval(run, 5000);
+}
+
+function statusPill(v) {
+  const cls = { ALARM: "bad", OK: "ok", open: "bad", resolved: "ok", on: "bad", off: "ok" }[v] || "warn";
+  return `<span class="pill ${cls}">${esc(v)}</span>`;
+}
+
+function incidentRows(list) {
+  if (!list.length) return `<div class="empty">No incidents yet. Run scripts/break.sh to open one.</div>`;
+  return `<div class="table-wrap"><table><thead><tr><th>Incident</th><th>Service</th><th>Alarm</th><th>Started</th><th>Status</th></tr></thead><tbody>` +
+    list.map((i) => `<tr class="click" data-id="${esc(i.incident_id)}"><td class="mono">${esc(i.incident_id)}</td><td>${esc(i.service)}</td>
+      <td class="mono">${esc(i.alarm_name)}</td><td>${dateTime(i.started_at)}</td><td>${statusPill(i.status)}</td></tr>`).join("") +
+    `</tbody></table></div>`;
+}
+
+function bindRows() {
+  document.querySelectorAll("tr.click").forEach((r) => r.onclick = () => { location.hash = "incidents/" + encodeURIComponent(r.dataset.id); });
+}
+
+function offline(ev) {
+  return ev.aws_connected ? "" : `<div class="card" style="margin-bottom:16px"><span class="pill warn">Not connected</span>
+    <span class="muted">&nbsp;This deployment has no AWS access, so live data is empty.</span></div>`;
+}
+
+function chart(ev) {
+  const max = Math.max(1, ...ev.error_buckets);
+  const mins = ev.error_buckets.length * ev.bucket_seconds / 60;
+  return `<div class="bars">${ev.error_buckets.map((v) =>
+    `<div class="bar ${v ? "" : "zero"}" style="height:${v ? Math.max(4, v / max * 100) : 2}%" title="${v} errors"></div>`).join("")}</div>
+    <div class="axis"><span>${mins} min ago</span><span>peak ${max}/${ev.bucket_seconds}s</span><span>now</span></div>`;
+}
+
+async function overview() {
+  const [s, ev] = await Promise.all([api("/api/status"), api("/api/events?minutes=15")]);
+  const latest = s.latest;
+  $("#view").innerHTML = `
+    <h1>Overview</h1><p class="sub">checkout-api, refreshed every 5 seconds</p>${offline(ev)}
+    <div class="grid cards">
+      <div class="card"><div class="stat-label">Alarm ${esc(s.alarm_name)}</div><div class="stat">${statusPill(s.alarm_state)}</div><div class="muted">${esc(s.alarm_rule)}</div></div>
+      <div class="card"><div class="stat-label">fail_mode flag</div><div class="stat">${statusPill(s.fail_mode)}</div><div class="muted">The break switch</div></div>
+      <div class="card"><div class="stat-label">Open incidents</div><div class="stat">${s.incidents_open}</div><div class="muted">${s.incidents_total} total</div></div>
+      <div class="card"><div class="stat-label">Errors, last 15 min</div><div class="stat">${ev.errors_total}</div><div class="muted">Voice calls ${s.voice_server ? "enabled" : "disabled"}</div></div>
+    </div>
+    <div class="grid cards">
+      <div class="card"><h2>Checkout errors</h2>${chart(ev)}</div>
+      <div class="card"><h2>Latest incident</h2>${latest ? `
+        <div class="mono"><a href="#incidents/${encodeURIComponent(latest.incident_id)}">${esc(latest.incident_id)}</a> ${statusPill(latest.status)}</div>
+        <p>${esc(latest.briefing_text)}</p><div class="muted">Started ${dateTime(latest.started_at)}</div>` : '<div class="empty">None yet.</div>'}</div>
+    </div>`;
+}
+
+async function incidents() {
+  const list = await api("/api/incidents");
+  $("#view").innerHTML = `<h1>Incidents</h1><p class="sub">Every alarm the watcher turned into an incident</p><div class="card">${incidentRows(list)}</div>`;
+  bindRows();
+}
+
+async function incidentDetail(id) {
+  $("#view").innerHTML = `<div class="muted">Loading ${esc(id)}...</div>`;
+  const d = await api("/api/incidents/" + encodeURIComponent(id));
+  const i = d.incident;
+  $("#view").innerHTML = `
+    <a class="back" href="#incidents">&larr; All incidents</a>
+    <h1 class="mono">${esc(i.incident_id)} ${statusPill(i.status)}</h1>
+    <p class="sub">${esc(i.service)} &middot; ${esc(i.alarm_name)} &middot; started ${dateTime(i.started_at)}</p>
+    <div class="grid cards">
+      <div class="card"><h2>Briefing</h2><p>${esc(i.briefing_text)}</p></div>
+      <div class="card"><h2>Records</h2>
+        ${d.links.box_folder ? `<a class="link-row" href="${esc(d.links.box_folder)}" target="_blank" rel="noopener">Box incident folder<span class="muted">Briefing, transcript, postmortem</span></a>` : ""}
+        <a class="link-row" href="${esc(d.links.timeline_logs)}" target="_blank" rel="noopener">Timeline in CloudWatch Logs<span class="muted">Raw log stream</span></a>
+      </div>
+    </div>
+    <div class="card"><h2>Timeline</h2>${d.timeline.length ? `<ul class="timeline">${d.timeline.map((t) =>
+      `<li><span class="mono muted">${time(t.ts)}</span><span class="t-type t-${esc(t.type)}">${esc(t.type)}</span><span>${esc(t.text)}</span></li>`).join("")}</ul>`
+      : '<div class="empty">No timeline rows.</div>'}</div>`;
+}
+
+async function events() {
+  const ev = await api("/api/events?minutes=30");
+  $("#view").innerHTML = `
+    <h1>Events</h1><p class="sub">Checkout errors (last 30 min) and config changes (last 24h), refreshed every 5 seconds</p>${offline(ev)}
+    <div class="card" style="margin-bottom:16px"><h2>Errors per ${ev.bucket_seconds}s</h2>${chart(ev)}</div>
+    <div class="card"><h2>Feed</h2>${ev.feed.length ? `<ul class="feed">${ev.feed.map((f) =>
+      `<li><span class="mono muted">${time(f.ts)}</span><span class="pill ${f.kind === "error" ? "bad" : "info"}">${f.kind}</span><span class="mono">${esc(f.text)}</span></li>`).join("")}</ul>`
+      : '<div class="empty">Quiet. No errors or config changes.</div>'}</div>`;
+}
+
+async function links() {
+  const d = await api("/api/links");
+  $("#view").innerHTML = `<h1>Links</h1><p class="sub">Consoles behind Pilot Light. Opens in a new tab; AWS links need the pilotlight account signed in.</p>
+    <div class="grid links">${d.sections.map((s) => `<div class="card"><h2>${esc(s.title)}</h2>${s.links.map((l) => l.url
+      ? `<a class="link-row" href="${esc(l.url)}" target="_blank" rel="noopener">${esc(l.label)}<span class="muted">${esc(l.detail)}</span></a>`
+      : `<div class="link-row muted">${esc(l.label)}<span class="muted">Not configured</span></div>`).join("")}</div>`).join("")}</div>`;
+}
+
+function plannedView(item) {
+  $("#view").innerHTML = `<h1>${esc(item.label)} <span class="soon">Planned</span></h1><p class="sub">Not built yet. This section will hold:</p>
+    <div class="card planned-box"><ul>${item.planned.map((p) => `<li>${esc(p)}</li>`).join("")}</ul></div>`;
+}
+
+async function start() {
+  $("#login").classList.add("hidden");
+  $("#app").classList.remove("hidden");
+  route();
+}
+
+window.addEventListener("hashchange", () => user && route());
+fetch("/api/me", { credentials: "same-origin" }).then(async (r) => {
+  if (r.ok) { user = (await r.json()).user; start(); } else showLogin();
+}).catch(showLogin);
+</script>
+</body>
+</html>

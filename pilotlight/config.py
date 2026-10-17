@@ -45,3 +45,8 @@ ONCALL_PHONE = os.getenv("ONCALL_PHONE", "")
 PAGE_PHONE = os.getenv("PAGE_PHONE", "")
 
 VOICE_SERVER_URL = os.getenv("VOICE_SERVER_URL", "").rstrip("/")
+
+# Operator dashboard (dashboard/app.py)
+DASHBOARD_USER = os.getenv("DASHBOARD_USER", "admin")
+DASHBOARD_PASSWORD = os.getenv("DASHBOARD_PASSWORD", "pilotlight")
+DASHBOARD_SECRET = os.getenv("DASHBOARD_SECRET", "")

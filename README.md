@@ -139,7 +139,7 @@ pilot-light/
     timeline.py      DynamoDB timeline helpers
     postmortem.py    Bedrock postmortem drafting
   voice/             FastAPI server, Nova Sonic session, telephony bridge, audio conversion
-  dashboard/         live timeline page
+  dashboard/         operator console: login, status, incidents, events, console links
   scripts/           traffic.sh, break.sh, fix.sh, force_alarm.sh
   runbooks/          markdown runbooks uploaded to Box
   contracts/         example incident object and timeline schema
@@ -171,6 +171,7 @@ cp .env.example .env        # fill in values, never commit .env
 2. Create the Box `/Runbooks` and `/Incidents` folders and the `runbook` metadata template, then upload `runbooks/checkout-5xx.md` with its metadata.
 3. Start the voice server: `uvicorn voice.server:app --port 8000`.
 4. Expose it with `ngrok http 8000` and put the URL in `VOICE_SERVER_URL` (also on the Incident Lambda).
+5. Start the operator dashboard: `uvicorn dashboard.app:app --port 8001`, then open http://localhost:8001. Sign in with `DASHBOARD_USER` and `DASHBOARD_PASSWORD` from `.env`.
 
 Box files are created by the app's service account. Collaborate your own Box login onto the folders to see them in the web UI.
 
