@@ -1,17 +1,14 @@
-"""Incident Lambda. Invoked by EventBridge when the checkout alarm enters ALARM."""
+"""Incident handler. Takes an EventBridge-shaped alarm event (sent by services/incident/watcher.py)
+so it can move to Lambda unchanged where the account allows it."""
 import datetime
 import json
 import urllib.request
 
-import boto3
-
-from pilotlight import aws_tools, box_tools, timeline
-from pilotlight.config import INCIDENTS_TABLE, ONCALL_PHONE, VOICE_SERVER_URL
-
-incidents = boto3.resource("dynamodb").Table(INCIDENTS_TABLE)
+from pilotlight import aws_tools, box_tools, incidents, timeline
+from pilotlight.config import ONCALL_PHONE, VOICE_SERVER_URL
 
 
-def handler(event, context):
+def handler(event, context=None):
     alarm = event["detail"]["alarmName"]
     now = datetime.datetime.now(datetime.timezone.utc)
     iid = "INC-" + now.strftime("%Y%m%d-%H%M%S")
@@ -27,19 +24,22 @@ def handler(event, context):
     box_tools.write_briefing(folder_id, iid, briefing)
     timeline.add(iid, "briefing", briefing)
 
-    incidents.put_item(Item={
+    incidents.put({
         "incident_id": iid, "service": "checkout-api", "alarm_name": alarm,
         "started_at": now.strftime("%Y-%m-%dT%H:%M:%SZ"), "status": "open",
         "box_folder_id": folder_id, "runbook_file_id": runbook_id or "",
         "briefing_text": briefing, "oncall_phone": ONCALL_PHONE})
 
     if VOICE_SERVER_URL:
-        req = urllib.request.Request(
-            f"{VOICE_SERVER_URL}/call", method="POST",
-            data=json.dumps({"incident_id": iid}).encode(),
-            headers={"Content-Type": "application/json"})
-        urllib.request.urlopen(req, timeout=10)
-        timeline.add(iid, "call", f"Calling on-call engineer ending in {ONCALL_PHONE[-4:]}")
+        try:
+            req = urllib.request.Request(
+                f"{VOICE_SERVER_URL}/call", method="POST",
+                data=json.dumps({"incident_id": iid}).encode(),
+                headers={"Content-Type": "application/json"})
+            urllib.request.urlopen(req, timeout=10)
+            timeline.add(iid, "call", f"Calling on-call engineer ending in {ONCALL_PHONE[-4:]}")
+        except Exception as e:
+            timeline.add(iid, "call", f"Call request failed: {e}")
     else:
         timeline.add(iid, "call", "VOICE_SERVER_URL not set, call skipped")
     return {"incident_id": iid}

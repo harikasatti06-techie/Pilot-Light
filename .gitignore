@@ -5,5 +5,4 @@ __pycache__/
 node_modules/
 cdk.out/
 .DS_Store
-build/
-infra/cdk.out/
+.state/

@@ -1,4 +1,4 @@
 #!/usr/bin/env bash
-# Backup trigger if the alarm is slow. Only produces an event if the alarm is not already in ALARM.
+# Backup trigger: the watcher opens an incident on its next poll if the alarm is currently OK.
 source "$(dirname "$0")/_env.sh"
-aws cloudwatch set-alarm-state --alarm-name "$ALARM" --state-value ALARM --state-reason "demo trigger" && echo "alarm forced to ALARM"
+mkdir -p .state && touch .state/force_alarm && echo "force_alarm requested"

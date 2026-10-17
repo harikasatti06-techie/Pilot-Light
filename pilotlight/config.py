@@ -10,10 +10,21 @@ except ImportError:
 AWS_REGION = os.getenv("AWS_REGION", "us-east-1")
 
 FAIL_MODE_PARAM = os.getenv("FAIL_MODE_PARAM", "/pilotlight/checkout/fail_mode")
-TIMELINE_TABLE = os.getenv("TIMELINE_TABLE", "pilotlight-timeline")
-INCIDENTS_TABLE = os.getenv("INCIDENTS_TABLE", "pilotlight-incidents")
-CHECKOUT_LOG_GROUP = os.getenv("CHECKOUT_LOG_GROUP", "/aws/lambda/pilotlight-checkout")
 ALARM_NAME = os.getenv("ALARM_NAME", "pilotlight-checkout-5xx")
+
+# CloudWatch Logs groups (created by scripts/setup_aws.py)
+CHECKOUT_LOG_GROUP = os.getenv("CHECKOUT_LOG_GROUP", "/pilotlight/checkout")
+CONFIG_AUDIT_LOG_GROUP = os.getenv("CONFIG_AUDIT_LOG_GROUP", "/pilotlight/config-audit")
+TIMELINE_LOG_GROUP = os.getenv("TIMELINE_LOG_GROUP", "/pilotlight/timeline")
+INCIDENTS_LOG_GROUP = os.getenv("INCIDENTS_LOG_GROUP", "/pilotlight/incidents")
+
+# Local state (flag value, incident records), shared by every process on the demo laptop
+STATE_DIR = os.getenv("STATE_DIR", os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), ".state"))
+
+# Alarm rule evaluated by services/incident/watcher.py
+ALARM_WINDOW_SECONDS = int(os.getenv("ALARM_WINDOW_SECONDS", "10"))
+ALARM_THRESHOLD = int(os.getenv("ALARM_THRESHOLD", "3"))
+CHECKOUT_PORT = int(os.getenv("CHECKOUT_PORT", "8080"))
 
 BOX_CLIENT_ID = os.getenv("BOX_CLIENT_ID", "")
 BOX_CLIENT_SECRET = os.getenv("BOX_CLIENT_SECRET", "")

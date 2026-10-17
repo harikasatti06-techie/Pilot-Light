@@ -1,8 +1,7 @@
 # Shared by the demo scripts
-export AWS_REGION=us-east-1 AWS_DEFAULT_REGION=us-east-1
-PARAM=/pilotlight/checkout/fail_mode
-ALARM=pilotlight-checkout-5xx
-api_url() {
-  aws cloudformation describe-stacks --stack-name PilotLight \
-    --query "Stacks[0].Outputs[?OutputKey=='ApiUrl'].OutputValue" --output text
-}
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+cd "$ROOT"
+PY="$ROOT/.venv/bin/python"
+set -a; [ -f "$ROOT/.env" ] && source "$ROOT/.env"; set +a
+export AWS_REGION="${AWS_REGION:-us-east-1}"
+export PYTHONUNBUFFERED=1

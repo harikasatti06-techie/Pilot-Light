@@ -12,9 +12,9 @@ When production breaks, Pilot Light **phones the on-call engineer**. A voice age
 
 | Component | State |
 |---|---|
-| AWS infra (CDK stack, demo service, alarm, EventBridge, tables, dashboard) | Built, not yet deployed |
-| Incident Lambda (alarm to incident record and timeline) | Built, Box calls stubbed, call skipped until the voice server is up |
-| AWS tools (`query_logs`, `what_changed`, `execute_remediation`) | Built |
+| Incident pipeline (checkout service, CloudWatch Logs, alarm watcher, incident record, timeline) | Working, tested end to end |
+| Incident handler | Working. Box calls stubbed, call skipped until the voice server is up |
+| AWS tools (`query_logs`, `what_changed`, `execute_remediation`) | Working against CloudWatch Logs |
 | Box tools (`get_briefing`, `ask_runbook`, incident folder, runbook lookup) | Stubbed |
 | Voice agent and telephony | Not started |
 | Postmortem and Box review task | Not started |
@@ -30,6 +30,8 @@ Flip the break switch → errors spike → phone rings → "What changed?" → "
 At 3am you are not at your laptop. A phone call meets the engineer where they are, and the conversation itself becomes the documentation. Slack alerts get ignored; a ringing phone does not.
 
 ## How it works
+
+> **Event account note.** The hackathon AWS account blocks Lambda, DynamoDB, SSM, EventBridge, CloudFormation and CloudWatch metrics through an organization policy. The current build runs the checkout service and alarm evaluator on the demo machine, uses CloudWatch Logs as the event store, and keeps the incident handler Lambda-shaped so it moves to the serverless design below unchanged. See [CLAUDE.md](CLAUDE.md).
 
 ```
 [Traffic script] → API Gateway → checkout Lambda ──reads──> SSM /pilotlight/checkout/fail_mode
@@ -82,7 +84,7 @@ Defined in [pilotlight/tools.py](pilotlight/tools.py). Every function returns sh
 
 - **Allowlist only.** The only actions that can run are listed in `ALLOWED_ACTIONS`. Anything else is refused. New actions are reviewed entries with their own runbook.
 - **Verbal confirmation.** The prompt tells the model to ask for "confirm" before a fix. Because a prompt is not a code constraint, the voice server must also verify that the engineer's latest transcribed turn contains "confirm" before it passes `confirmed=True`.
-- **Scoped IAM.** `ssm:PutParameter` is limited to the single fail-mode parameter.
+- **Single remediation path.** `execute_remediation` can only flip the fail-mode flag off, and every change is audited to CloudWatch Logs with who made it.
 - **Audit trail.** Every tool call, action and utterance is written to the timeline and to the Box incident folder.
 - **Human review.** The postmortem is a draft generated from structured timeline data, and a Box review task assigns a human to approve it.
 - **Idempotent incidents.** The Incident Lambda should check for an existing open incident for the same alarm so a re-triggered alarm does not create duplicates.
@@ -165,7 +167,7 @@ pip install -r requirements.txt
 cp .env.example .env        # fill in values, never commit .env
 ```
 
-1. Deploy the stack: `cd infra && cdk bootstrap && cdk deploy`.
+1. Sign in (`aws login --profile pilotlight`), then create the CloudWatch Logs groups: `python scripts/setup_aws.py`. Start the service and watcher with `scripts/start.sh`.
 2. Create the Box `/Runbooks` and `/Incidents` folders and the `runbook` metadata template, then upload `runbooks/checkout-5xx.md` with its metadata.
 3. Start the voice server: `uvicorn voice.server:app --port 8000`.
 4. Expose it with `ngrok http 8000` and put the URL in `VOICE_SERVER_URL` (also on the Incident Lambda).

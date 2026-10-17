@@ -7,6 +7,4 @@ twilio
 python-dotenv
 aws-sdk-bedrock-runtime   # Nova Sonic bidirectional streaming (boto3 does not support it)
 
-# Infra (CDK)
-aws-cdk-lib
-constructs
+awscrt                    # duplex transport for the Nova Sonic stream
