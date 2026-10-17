@@ -5,10 +5,11 @@ Run: uvicorn voice.server:app --port 8000   (expose with ngrok, set VOICE_SERVER
 import asyncio
 import base64
 import json
+from urllib.parse import urlencode
 from xml.sax.saxutils import quoteattr
 
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, Response
 
 from pilotlight import incidents, postmortem, timeline
 from pilotlight.config import (ONCALL_PHONE, TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN,
@@ -36,12 +37,19 @@ async def call(body: dict):
     if missing:
         return JSONResponse(status_code=503, content={"error": f"Twilio not configured, missing: {', '.join(missing)}"})
     from twilio.rest import Client
-    ws_url = VOICE_SERVER_URL.replace("https://", "wss://") + "/media"
-    twiml = (f"<Response><Connect><Stream url={quoteattr(ws_url)}>"
-             f"<Parameter name=\"incident_id\" value={quoteattr(iid)}/></Stream></Connect></Response>")
+    # Twilio fetches the TwiML from /twiml; trial accounts reject inline twiml on calls.create
     c = await asyncio.to_thread(Client(TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN).calls.create,
-                                to=ONCALL_PHONE, from_=TWILIO_FROM_NUMBER, twiml=twiml)
+                                to=ONCALL_PHONE, from_=TWILIO_FROM_NUMBER,
+                                url=f"{VOICE_SERVER_URL}/twiml?{urlencode({'incident_id': iid})}")
     return {"call_sid": c.sid}
+
+
+@app.api_route("/twiml", methods=["GET", "POST"])
+async def twiml(incident_id: str):
+    ws_url = VOICE_SERVER_URL.replace("https://", "wss://") + "/media"
+    xml = (f"<?xml version=\"1.0\" encoding=\"UTF-8\"?><Response><Connect><Stream url={quoteattr(ws_url)}>"
+           f"<Parameter name=\"incident_id\" value={quoteattr(incident_id)}/></Stream></Connect></Response>")
+    return Response(content=xml, media_type="application/xml")
 
 
 @app.websocket("/media")
