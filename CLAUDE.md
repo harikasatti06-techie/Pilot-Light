@@ -55,7 +55,8 @@ Last updated: Fri Oct 16, 2026, 11:10pm.
 
 ### Not done (in order)
 - [ ] Box: `box_client.py`, `scripts/box_setup.py`, real `box_tools.py`, `get_briefing` from `incidents.get`, `ask_runbook`, `runbooks/checkout-5xx.md` (needs P3's credentials)
-- [ ] Voice server: `voice/` Nova 2 Sonic + Twilio Media Streams bridge, postmortem on hang-up
+- [x] `voice/`: FastAPI server bridging Twilio Media Streams to Nova 2 Sonic (`uvicorn voice.server:app --port 8000`). `POST /call` (503 until Twilio creds are set), `WS /media`, `GET /health`. Reuses agent.py prompt, tools and confirm gate. Postmortem runs on hang-up. Tested with `voice/fake_twilio.py`: briefing 2.3s after connect, replies 1.2 to 2.8s, fix only after "confirm".
+- [ ] Twilio live: creds in `.env`, ngrok static domain in `VOICE_SERVER_URL`, real call test. Let the agent finish its last sentence before hanging up.
 - [ ] Code-level confirm check in the voice server (promised in the README)
 - [ ] Projector view: CloudWatch Logs Live Tail on `/pilotlight/checkout` replaces the blocked metrics dashboard. Optional: metric filter graph (filter creation is allowed, graph read untested)
 - [ ] README architecture diagram still shows the serverless design; update during the Sat 11:30 README pass
