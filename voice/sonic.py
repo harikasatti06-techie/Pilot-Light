@@ -23,6 +23,12 @@ from . import prompt
 
 OUT_RATE = 8000  # Twilio's rate, so no resampling on the way out
 VOICE_ID = "matthew"
+END_CALL_QUIET_SECONDS = 1.5  # model audio has stopped for this long, so the goodbye is fully generated
+
+END_CALL_SPEC = {"toolSpec": {
+    "name": "end_call",
+    "description": "Hang up the phone call. Only after the engineer agrees to end the call and you have said goodbye.",
+    "inputSchema": {"json": json.dumps({"type": "object", "properties": {}})}}}
 
 
 class _ProfileCredentials(IdentityResolver):
@@ -37,15 +43,17 @@ class _ProfileCredentials(IdentityResolver):
 def _sonic_tools() -> list[dict]:
     """The text agent's tool specs, with the JSON schema serialized as Sonic expects."""
     return [{"toolSpec": {**t["toolSpec"], "inputSchema": {"json": json.dumps(t["toolSpec"]["inputSchema"]["json"])}}}
-            for t in TOOL_SPECS]
+            for t in TOOL_SPECS] + [END_CALL_SPEC]
 
 
 class SonicSession:
     def __init__(self, incident_id: str,
                  on_audio: Callable[[bytes], Awaitable[None]],
-                 on_interrupt: Callable[[], Awaitable[None]] | None = None):
+                 on_interrupt: Callable[[], Awaitable[None]] | None = None,
+                 on_end: Callable[[], Awaitable[None]] | None = None):
         self.incident_id = incident_id
-        self.on_audio, self.on_interrupt = on_audio, on_interrupt
+        self.on_audio, self.on_interrupt, self.on_end = on_audio, on_interrupt, on_end
+        self._last_audio = 0.0
         self.transcript: list[str] = []
         self.last_user = ""
         self.closed = False
@@ -134,6 +142,7 @@ class SonicSession:
 
     async def _handle(self, kind: str, body: dict) -> None:
         if kind == "audioOutput":
+            self._last_audio = asyncio.get_running_loop().time()
             await self.on_audio(base64.b64decode(body["content"]))
         elif kind == "contentStart" and body.get("type") == "TEXT":
             fields = json.loads(body.get("additionalModelFields") or "{}")
@@ -159,9 +168,13 @@ class SonicSession:
 
     async def _tool(self, body: dict) -> None:
         name, args = body.get("toolName", ""), json.loads(body.get("content") or "{}")
-        # Code-level confirm gate: _run_tool checks the latest engineer transcript for "confirm"
-        self._tool_runner._last_user = self.last_user
-        result = await asyncio.to_thread(self._tool_runner._run_tool, name, args)
+        if name == "end_call":
+            result = "Ending the call now."
+            asyncio.create_task(self._end_when_quiet())
+        else:
+            # Code-level confirm gate: _run_tool checks the latest engineer transcript for "confirm"
+            self._tool_runner._last_user = self.last_user
+            result = await asyncio.to_thread(self._tool_runner._run_tool, name, args)
         content = str(uuid.uuid4())
         await self._send({"contentStart": {"promptName": self._prompt, "contentName": content, "interactive": False,
                           "type": "TOOL", "role": "TOOL",
@@ -170,3 +183,14 @@ class SonicSession:
         await self._send({"toolResult": {"promptName": self._prompt, "contentName": content,
                                          "content": json.dumps({"result": result})}})
         await self._send({"contentEnd": {"promptName": self._prompt, "contentName": content}})
+
+    async def _end_when_quiet(self) -> None:
+        """Wait until the goodbye has finished generating, then hand off to the caller to hang up."""
+        loop = asyncio.get_running_loop()
+        deadline = loop.time() + 15
+        await asyncio.sleep(1.0)
+        while loop.time() - self._last_audio < END_CALL_QUIET_SECONDS and loop.time() < deadline:
+            await asyncio.sleep(0.25)
+        await asyncio.to_thread(timeline.add, self.incident_id, "call", "Agent ended the call")
+        if self.on_end:
+            await self.on_end()

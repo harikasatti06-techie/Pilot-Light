@@ -16,7 +16,7 @@ from pathlib import Path
 
 import websockets
 
-SCRIPT = ["What changed?", "Revert it.", "Confirm."]
+SCRIPT = ["What changed?", "Revert it.", "Confirm.", "Yes, you can end the call."]
 FRAME = 160          # 20ms of 8 kHz mu-law
 SILENCE = b"\xff" * FRAME
 QUIET_SECONDS = 2.0  # agent turn is over after this long without audio
@@ -47,6 +47,8 @@ async def main(iid: str, url: str, out: str) -> None:
             async for raw in ws:
                 m = json.loads(raw)
                 counts[m["event"]] = counts.get(m["event"], 0) + 1
+                if m["event"] == "mark":  # Twilio echoes a mark once the audio before it has played
+                    await ws.send(json.dumps(m))
                 if m["event"] == "media":
                     received.extend(base64.b64decode(m["media"]["payload"]))
                     state["last_audio"] = time.time()

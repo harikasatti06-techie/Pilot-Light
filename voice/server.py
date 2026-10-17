@@ -55,7 +55,8 @@ async def twiml(incident_id: str):
 @app.websocket("/media")
 async def media(ws: WebSocket):
     await ws.accept()
-    conv, session, stream_sid, iid = Converter(), None, None, None
+    conv, session, stream_sid, iid, call_sid = Converter(), None, None, None, None
+    hangup_sent = False
 
     async def to_twilio(pcm: bytes) -> None:
         ulaw = conv.sonic_to_twilio(pcm)
@@ -66,18 +67,36 @@ async def media(ws: WebSocket):
     async def barge_in() -> None:
         await ws.send_text(json.dumps({"event": "clear", "streamSid": stream_sid}))
 
+    async def hang_up() -> None:
+        # Twilio echoes the mark once the goodbye audio before it has played; hang up then (or after a timeout)
+        await ws.send_text(json.dumps({"event": "mark", "streamSid": stream_sid, "mark": {"name": "goodbye"}}))
+        asyncio.get_running_loop().call_later(10, lambda: asyncio.ensure_future(complete_call()))
+
+    async def complete_call() -> None:
+        nonlocal hangup_sent
+        if hangup_sent or not call_sid:
+            return
+        hangup_sent = True
+        from twilio.rest import Client
+        try:
+            await asyncio.to_thread(lambda: Client(TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN).calls(call_sid).update(status="completed"))
+        except Exception as e:
+            print(f"[voice] hang-up failed: {e}")
+
     try:
         while True:
             msg = json.loads(await ws.receive_text())
             event = msg.get("event")
             if event == "start":
-                stream_sid = msg["start"]["streamSid"]
+                stream_sid, call_sid = msg["start"]["streamSid"], msg["start"].get("callSid")
                 iid = msg["start"].get("customParameters", {}).get("incident_id") or (incidents.latest() or {}).get("incident_id")
                 print(f"[voice] call started for {iid}")
-                session = SonicSession(iid, to_twilio, barge_in)
+                session = SonicSession(iid, to_twilio, barge_in, hang_up)
                 await session.start()
             elif event == "media" and session:
                 await session.send_audio(conv.twilio_to_sonic(base64.b64decode(msg["media"]["payload"])))
+            elif event == "mark" and msg.get("mark", {}).get("name") == "goodbye":
+                await complete_call()
             elif event == "stop":
                 break
     except WebSocketDisconnect:
