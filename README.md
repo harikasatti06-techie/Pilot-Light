@@ -185,7 +185,3 @@ Pre-flight checklist: flag off and alarm OK, traffic running, voice server and n
 | Tool calls add pauses to the conversation | Keep tool output short and have the agent say it is checking before calling a tool |
 | Duplicate incidents when an alarm re-fires | Idempotency check on open incidents, alarm datapoint settings, cooldown after fix |
 | Phone path fails live | Laptop mic and speaker fallback with the same tools, plus a pre-recorded backup run |
-
-## Team
-
-Built by a four-person team: incident pipeline and integration, voice agent and telephony, Box integration and postmortem, and infrastructure and dashboard.
