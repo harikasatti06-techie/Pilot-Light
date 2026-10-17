@@ -6,164 +6,354 @@
 <title>Pilot Light</title>
 <style>
   :root {
-    --bg: #0f1115; --panel: #171a21; --panel-2: #1e222b; --line: #2a2f3a;
-    --text: #e6e8ec; --muted: #8b93a3; --accent: #ff7a1a; --accent-soft: rgba(255,122,26,.14);
-    --ok: #3ccf8e; --bad: #ff4d5e; --warn: #f5b942; --info: #5aa9ff;
+    --bg: #0b0d12; --panel: #141821; --panel-2: #1b202b; --line: #262c39; --line-2: #323a4a;
+    --text: #eef1f6; --muted: #8f98aa; --dim: #5f687a;
+    --accent: #ff7a1a; --accent-soft: rgba(255,122,26,.14);
+    --ok: #34d399; --ok-soft: rgba(52,211,153,.14); --bad: #ff4d5e; --bad-soft: rgba(255,77,94,.16);
+    --warn: #f5b942; --warn-soft: rgba(245,185,66,.14); --info: #60a5fa; --info-soft: rgba(96,165,250,.14);
+    --violet: #a78bfa;
   }
   * { box-sizing: border-box; }
-  body { margin: 0; background: var(--bg); color: var(--text); font: 14px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif; }
+  html, body { height: 100%; }
+  body { margin: 0; background: var(--bg); color: var(--text); font: 15px/1.5 Inter, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; -webkit-font-smoothing: antialiased; }
   a { color: var(--info); text-decoration: none; }
   a:hover { text-decoration: underline; }
-  button { font: inherit; cursor: pointer; }
+  button { font: inherit; cursor: pointer; color: inherit; }
   .hidden { display: none !important; }
-  .mono { font-family: ui-monospace, "SF Mono", Consolas, monospace; font-size: 12.5px; }
+  .mono { font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace; font-size: .88em; }
   .muted { color: var(--muted); }
+  .dim { color: var(--dim); }
+
+  /* Brand */
+  .brand { display: flex; align-items: center; gap: 10px; font-weight: 700; font-size: 17px; letter-spacing: .01em; }
+  .flame { width: 30px; height: 30px; border-radius: 9px; flex: none; display: grid; place-items: center;
+    background: radial-gradient(circle at 50% 75%, #ffd166 0, var(--accent) 55%, #b4380a 100%); box-shadow: 0 0 18px rgba(255,122,26,.35); }
+  .flame svg { width: 16px; height: 16px; }
 
   /* Login */
-  #login { min-height: 100vh; display: grid; place-items: center; padding: 16px; }
-  .login-card { width: 100%; max-width: 380px; background: var(--panel); border: 1px solid var(--line); border-radius: 14px; padding: 32px; }
-  .brand { display: flex; align-items: center; gap: 10px; font-weight: 700; font-size: 18px; }
-  .flame { width: 28px; height: 28px; border-radius: 8px; background: radial-gradient(circle at 50% 70%, #ffd166, var(--accent) 60%, #c2410c); }
-  .login-card p { margin: 8px 0 24px; }
-  label { display: block; font-size: 12px; color: var(--muted); margin: 14px 0 6px; }
-  input { width: 100%; padding: 10px 12px; border-radius: 8px; border: 1px solid var(--line); background: var(--bg); color: var(--text); font: inherit; }
-  input:focus { outline: 2px solid var(--accent); border-color: transparent; }
-  .btn { width: 100%; margin-top: 22px; padding: 10px; border: 0; border-radius: 8px; background: var(--accent); color: #111; font-weight: 600; }
+  #login { min-height: 100vh; display: grid; grid-template-columns: 1.1fr 1fr; }
+  .login-hero { position: relative; overflow: hidden; padding: 48px; display: flex; flex-direction: column; justify-content: space-between;
+    background: radial-gradient(900px 500px at 15% 110%, rgba(255,122,26,.20), transparent 60%), linear-gradient(160deg, #10131a, #0b0d12 60%);
+    border-right: 1px solid var(--line); }
+  .login-hero h1 { font-size: 40px; line-height: 1.15; margin: 0 0 14px; max-width: 520px; letter-spacing: -.01em; }
+  .login-hero p { color: var(--muted); max-width: 480px; margin: 0; font-size: 16px; }
+  .hero-points { list-style: none; padding: 0; margin: 28px 0 0; display: grid; gap: 12px; max-width: 480px; }
+  .hero-points li { display: flex; gap: 12px; align-items: flex-start; color: var(--text); }
+  .hero-points svg { width: 18px; height: 18px; flex: none; margin-top: 3px; color: var(--accent); }
+  .hero-foot { font-size: 13px; color: var(--dim); }
+  .login-side { display: grid; place-items: center; padding: 32px 16px; }
+  .login-card { width: 100%; max-width: 380px; }
+  .login-card h2 { font-size: 22px; margin: 26px 0 6px; }
+  .login-card .sub { margin: 0 0 22px; }
+  label { display: block; font-size: 13px; color: var(--muted); margin: 14px 0 6px; }
+  input { width: 100%; padding: 11px 13px; border-radius: 9px; border: 1px solid var(--line-2); background: #0e1118; color: var(--text); font: inherit; }
+  input:focus { outline: 2px solid var(--accent); outline-offset: 0; border-color: transparent; }
+  .btn { width: 100%; margin-top: 22px; padding: 11px; border: 0; border-radius: 9px; background: var(--accent); color: #140a02; font-weight: 700; }
+  .btn:disabled { opacity: .6; cursor: progress; }
   .error { color: var(--bad); font-size: 13px; margin-top: 12px; min-height: 18px; }
+  .login-note { margin-top: 28px; font-size: 12px; color: var(--dim); }
 
   /* Shell */
-  #app { display: grid; grid-template-columns: 240px 1fr; min-height: 100vh; }
-  nav { background: var(--panel); border-right: 1px solid var(--line); padding: 18px 12px; display: flex; flex-direction: column; gap: 2px; position: sticky; top: 0; height: 100vh; overflow-y: auto; }
-  nav .brand { padding: 4px 10px 18px; }
-  .nav-group { font-size: 11px; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); padding: 16px 10px 6px; }
-  .nav-item { display: flex; justify-content: space-between; align-items: center; padding: 8px 10px; border-radius: 8px; color: var(--text); background: none; border: 0; text-align: left; width: 100%; }
-  .nav-item:hover { background: var(--panel-2); }
+  #app { display: grid; grid-template-columns: 232px 1fr; min-height: 100vh; }
+  nav { background: #10131a; border-right: 1px solid var(--line); padding: 18px 12px; display: flex; flex-direction: column; gap: 2px;
+    position: sticky; top: 0; height: 100vh; overflow-y: auto; }
+  nav .brand { padding: 4px 8px 20px; }
+  .nav-group { font-size: 11px; text-transform: uppercase; letter-spacing: .09em; color: var(--dim); padding: 16px 10px 6px; }
+  .nav-item { display: flex; align-items: center; gap: 10px; padding: 9px 10px; border-radius: 8px; background: none; border: 0; text-align: left; width: 100%; color: var(--muted); }
+  .nav-item svg { width: 17px; height: 17px; flex: none; }
+  .nav-item:hover { background: var(--panel-2); color: var(--text); }
   .nav-item.active { background: var(--accent-soft); color: var(--accent); }
-  .nav-item.planned { color: var(--muted); }
-  .soon { font-size: 10px; padding: 1px 6px; border-radius: 99px; border: 1px solid var(--line); color: var(--muted); }
-  .nav-foot { margin-top: auto; padding: 14px 10px 0; border-top: 1px solid var(--line); font-size: 13px; display: flex; justify-content: space-between; align-items: center; }
+  .nav-foot { margin-top: auto; padding: 14px 8px 0; border-top: 1px solid var(--line); font-size: 13px; display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+  .nav-foot .who { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .link-btn { background: none; border: 0; color: var(--info); padding: 0; }
-  main { padding: 28px 32px; min-width: 0; }
-  h1 { font-size: 22px; margin: 0 0 4px; }
-  h2 { font-size: 15px; margin: 0 0 12px; }
-  .sub { color: var(--muted); margin: 0 0 24px; }
+
+  .content { min-width: 0; display: flex; flex-direction: column; }
+  .topbar { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; padding: 12px 28px; border-bottom: 1px solid var(--line);
+    background: rgba(11,13,18,.9); position: sticky; top: 0; z-index: 5; backdrop-filter: blur(6px); }
+  .topbar .svc { font-weight: 600; }
+  .topbar .spacer { flex: 1; }
+  .live-dot { display: inline-flex; align-items: center; gap: 7px; font-size: 13px; color: var(--muted); }
+  .live-dot i { width: 8px; height: 8px; border-radius: 50%; background: var(--ok); box-shadow: 0 0 0 0 rgba(52,211,153,.6); animation: pulse 2s infinite; }
+  .live-dot.stale i { background: var(--warn); animation: none; }
+  @keyframes pulse { 0% { box-shadow: 0 0 0 0 rgba(52,211,153,.55); } 70% { box-shadow: 0 0 0 9px rgba(52,211,153,0); } 100% { box-shadow: 0 0 0 0 rgba(52,211,153,0); } }
+  main { padding: 24px 28px 40px; min-width: 0; }
+  h1 { font-size: 24px; margin: 0 0 4px; letter-spacing: -.01em; }
+  h2 { font-size: 13px; margin: 0 0 14px; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); font-weight: 600; display: flex; align-items: center; gap: 8px; }
+  .sub { color: var(--muted); margin: 0 0 22px; }
+
+  .banner { display: flex; gap: 12px; align-items: center; padding: 12px 16px; border-radius: 10px; margin-bottom: 18px;
+    background: var(--warn-soft); border: 1px solid rgba(245,185,66,.35); color: var(--text); }
+  .banner b { color: var(--warn); }
 
   .grid { display: grid; gap: 16px; }
-  .cards { grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); margin-bottom: 16px; }
-  .card { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 18px; min-width: 0; }
-  .stat-label { font-size: 12px; color: var(--muted); }
-  .stat { font-size: 26px; font-weight: 700; margin-top: 4px; }
-  .pill { display: inline-block; padding: 2px 10px; border-radius: 99px; font-size: 12px; font-weight: 600; }
-  .pill.ok { background: rgba(60,207,142,.15); color: var(--ok); }
-  .pill.bad { background: rgba(255,77,94,.15); color: var(--bad); }
-  .pill.warn { background: rgba(245,185,66,.15); color: var(--warn); }
-  .pill.info { background: rgba(90,169,255,.15); color: var(--info); }
+  .cards { grid-template-columns: repeat(4, minmax(0, 1fr)); margin-bottom: 16px; }
+  .two { grid-template-columns: minmax(0, 1.7fr) minmax(0, 1fr); margin-bottom: 16px; }
+  .card { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 18px 20px; min-width: 0; }
+  .card.alert { border-color: rgba(255,77,94,.55); box-shadow: 0 0 0 1px rgba(255,77,94,.25), 0 0 28px rgba(255,77,94,.12); }
+  .stat-label { font-size: 13px; color: var(--muted); }
+  .stat { font-size: 30px; font-weight: 700; margin: 6px 0 2px; line-height: 1.15; }
+  .pill { display: inline-flex; align-items: center; gap: 6px; padding: 3px 11px; border-radius: 99px; font-size: 13px; font-weight: 700; letter-spacing: .03em; }
+  .stat .pill { font-size: 20px; padding: 4px 14px; }
+  .pill.ok { background: var(--ok-soft); color: var(--ok); }
+  .pill.bad { background: var(--bad-soft); color: var(--bad); }
+  .pill.warn { background: var(--warn-soft); color: var(--warn); }
+  .pill.info { background: var(--info-soft); color: var(--info); }
 
-  .bars { display: flex; align-items: flex-end; gap: 3px; height: 120px; padding-top: 8px; }
-  .bar { flex: 1; background: var(--bad); border-radius: 3px 3px 0 0; min-height: 2px; opacity: .85; }
-  .bar.zero { background: var(--line); }
-  .axis { display: flex; justify-content: space-between; font-size: 11px; color: var(--muted); margin-top: 6px; }
+  /* Chart */
+  .chart svg { width: 100%; height: 150px; display: block; }
+  .axis { display: flex; justify-content: space-between; font-size: 12px; color: var(--dim); margin-top: 6px; }
+
+  /* Incident header */
+  .inc-head { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin-bottom: 4px; }
+  .inc-head .id { font-size: 20px; font-weight: 700; }
+  .elapsed { font-variant-numeric: tabular-nums; color: var(--muted); }
+  .briefing { font-size: 16px; margin: 10px 0 0; color: var(--text); }
+
+  /* Transcript */
+  .transcript { display: flex; flex-direction: column; gap: 12px; max-height: 560px; overflow-y: auto; padding-right: 4px; }
+  .msg { display: grid; grid-template-columns: 38px 1fr; gap: 12px; align-items: start; }
+  .msg .av { width: 38px; height: 38px; border-radius: 10px; display: grid; place-items: center; }
+  .msg .av svg { width: 19px; height: 19px; }
+  .msg.agent .av { background: var(--accent-soft); color: var(--accent); }
+  .msg.user .av { background: var(--info-soft); color: var(--info); }
+  .msg .who { font-size: 12px; color: var(--muted); display: flex; gap: 10px; }
+  .msg .txt { font-size: 19px; line-height: 1.45; }
+  .msg.user .txt { color: #cfe1ff; }
+
+  /* Vertical timeline */
+  .vt { list-style: none; margin: 0; padding: 0; position: relative; }
+  .vt li { position: relative; display: grid; grid-template-columns: 34px 1fr; gap: 12px; padding: 0 0 16px; }
+  .vt li::before { content: ""; position: absolute; left: 16px; top: 34px; bottom: 0; width: 2px; background: var(--line); }
+  .vt li:last-child::before { display: none; }
+  .vt .ic { width: 34px; height: 34px; border-radius: 50%; display: grid; place-items: center; background: var(--panel-2); border: 1px solid var(--line-2); color: var(--muted); z-index: 1; }
+  .vt .ic svg { width: 16px; height: 16px; }
+  .vt .meta { display: flex; gap: 10px; align-items: baseline; font-size: 12px; }
+  .vt .type { font-weight: 700; text-transform: uppercase; letter-spacing: .06em; }
+  .vt .body { margin-top: 2px; word-break: break-word; }
+  .vt li.big .body { font-size: 18px; }
+  .ty-alarm .ic { color: var(--bad); border-color: rgba(255,77,94,.5); background: var(--bad-soft); } .ty-alarm .type { color: var(--bad); }
+  .ty-briefing .ic { color: var(--warn); border-color: rgba(245,185,66,.45); } .ty-briefing .type { color: var(--warn); }
+  .ty-call .ic { color: var(--violet); } .ty-call .type { color: var(--violet); }
+  .ty-user .ic { color: var(--info); border-color: rgba(96,165,250,.45); } .ty-user .type { color: var(--info); }
+  .ty-agent .ic { color: var(--accent); border-color: rgba(255,122,26,.45); } .ty-agent .type { color: var(--accent); }
+  .ty-tool .type { color: var(--muted); }
+  .ty-action .ic { color: var(--ok); border-color: rgba(52,211,153,.55); background: var(--ok-soft); } .ty-action .type { color: var(--ok); }
+  .ty-postmortem .ic { color: var(--ok); } .ty-postmortem .type { color: var(--ok); }
+  .scroll { max-height: 560px; overflow-y: auto; padding-right: 4px; }
+
+  /* Guardrails, records, links */
+  .checks { list-style: none; margin: 0; padding: 0; display: grid; gap: 12px; }
+  .checks li { display: grid; grid-template-columns: 22px 1fr; gap: 10px; align-items: start; }
+  .checks svg { width: 20px; height: 20px; color: var(--ok); margin-top: 2px; }
+  .checks b { display: block; }
+  .checks span { color: var(--muted); font-size: 13px; }
+  .link-row { display: block; padding: 11px 0; border-bottom: 1px solid var(--line); }
+  .link-row:last-child { border-bottom: 0; }
+  .link-row .muted { display: block; font-size: 13px; }
+  .links { grid-template-columns: repeat(auto-fit, minmax(270px, 1fr)); }
 
   table { width: 100%; border-collapse: collapse; }
-  th, td { text-align: left; padding: 10px 12px; border-bottom: 1px solid var(--line); vertical-align: top; }
-  th { font-size: 12px; color: var(--muted); font-weight: 500; }
+  th, td { text-align: left; padding: 11px 12px; border-bottom: 1px solid var(--line); vertical-align: top; }
+  th { font-size: 12px; color: var(--muted); font-weight: 600; text-transform: uppercase; letter-spacing: .06em; }
   tr.click { cursor: pointer; }
   tr.click:hover td { background: var(--panel-2); }
   .table-wrap { overflow-x: auto; }
+  .feed { list-style: none; margin: 0; padding: 0; max-height: 520px; overflow-y: auto; }
+  .feed li { display: grid; grid-template-columns: 90px 78px 1fr; gap: 12px; padding: 9px 0; border-bottom: 1px solid var(--line); align-items: center; }
+  .feed li > :last-child { word-break: break-word; }
+  .back { margin-bottom: 14px; display: inline-block; }
+  .empty { color: var(--muted); padding: 18px 0; }
+  .roadmap li { margin: 8px 0; }
+  .tag { font-size: 11px; padding: 2px 8px; border-radius: 99px; border: 1px solid var(--line-2); color: var(--muted); font-weight: 600; letter-spacing: .04em; text-transform: uppercase; }
 
-  .feed { list-style: none; margin: 0; padding: 0; max-height: 420px; overflow-y: auto; }
-  .feed li { display: grid; grid-template-columns: 82px 64px 1fr; gap: 10px; padding: 8px 0; border-bottom: 1px solid var(--line); }
-  .timeline { list-style: none; margin: 0; padding: 0; }
-  .timeline li { display: grid; grid-template-columns: 90px 90px 1fr; gap: 12px; padding: 10px 0; border-bottom: 1px solid var(--line); }
-  .t-type { font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: .04em; }
-  .t-alarm { color: var(--bad); } .t-briefing { color: var(--warn); } .t-user { color: var(--info); }
-  .t-agent { color: var(--accent); } .t-tool, .t-call { color: var(--muted); } .t-fix, .t-remediation { color: var(--ok); }
-
-  .links { grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); }
-  .link-row { display: block; padding: 10px 0; border-bottom: 1px solid var(--line); }
-  .link-row:last-child { border-bottom: 0; }
-  .link-row .muted { display: block; font-size: 12px; }
-  .back { margin-bottom: 16px; display: inline-block; }
-  .planned-box ul { margin: 8px 0 0; padding-left: 20px; }
-  .planned-box li { margin: 6px 0; }
-  .empty { color: var(--muted); padding: 20px 0; }
-
+  @media (max-width: 1100px) {
+    .cards { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .two { grid-template-columns: minmax(0, 1fr); }
+  }
   @media (max-width: 760px) {
+    #login { grid-template-columns: 1fr; }
+    .login-hero { display: none; }
     #app { grid-template-columns: 1fr; }
     nav { position: static; height: auto; flex-direction: row; flex-wrap: wrap; padding: 12px 16px; }
     nav .brand { width: 100%; padding-bottom: 8px; }
-    .nav-group, .nav-item.planned { display: none; }
+    .nav-group { display: none; }
     .nav-item { width: auto; }
     .nav-foot { width: 100%; margin-top: 8px; }
-    main { padding: 20px 16px; }
-    .feed li, .timeline li { grid-template-columns: 70px 1fr; }
-    .feed li > :last-child, .timeline li > :last-child { grid-column: 1 / -1; }
+    .topbar { padding: 10px 16px; position: static; }
+    main { padding: 18px 16px 32px; }
+    .cards { grid-template-columns: minmax(0, 1fr); }
+    .feed li { grid-template-columns: 76px 1fr; }
+    .feed li > :last-child { grid-column: 1 / -1; }
+    .msg .txt { font-size: 17px; }
   }
 </style>
 </head>
 <body>
 
 <section id="login" class="hidden">
-  <form class="login-card" id="login-form">
-    <div class="brand"><div class="flame"></div>Pilot Light</div>
-    <p class="muted">Sign in to the incident console.</p>
-    <label for="username">Username</label>
-    <input id="username" autocomplete="username" required>
-    <label for="password">Password</label>
-    <input id="password" type="password" autocomplete="current-password" required>
-    <button class="btn" type="submit">Sign in</button>
-    <div class="error" id="login-error"></div>
-  </form>
+  <div class="login-hero">
+    <div class="brand"><div class="flame" data-icon="flame"></div>Pilot Light</div>
+    <div>
+      <h1>Always on. Ignites when production breaks.</h1>
+      <p>When an alarm fires, Pilot Light phones the on-call engineer, briefs them with live AWS data and Box runbooks, and runs an approved fix only after they say confirm.</p>
+      <ul class="hero-points">
+        <li><span data-icon="phone"></span><span>Voice agent on Amazon Nova 2 Sonic, on a real phone call</span></li>
+        <li><span data-icon="shield"></span><span>Allowlisted remediation, gated on verbal confirmation in code</span></li>
+        <li><span data-icon="doc"></span><span>Briefing, transcript, timeline and postmortem recorded in Box</span></li>
+      </ul>
+    </div>
+    <div class="hero-foot">Box + AWS Agentic Enterprise AI Hackathon, Seattle</div>
+  </div>
+  <div class="login-side">
+    <form class="login-card" id="login-form" autocomplete="on">
+      <div class="brand"><div class="flame" data-icon="flame"></div>Pilot Light</div>
+      <h2>Sign in</h2>
+      <p class="sub muted">Incident operations console</p>
+      <label for="username">Username</label>
+      <input id="username" name="username" autocomplete="username" required>
+      <label for="password">Password</label>
+      <input id="password" name="password" type="password" autocomplete="current-password" required>
+      <button class="btn" type="submit" id="login-btn">Sign in</button>
+      <div class="error" id="login-error" role="alert"></div>
+      <div class="login-note">Read-only view. Remediation runs only from the on-call phone call.</div>
+    </form>
+  </div>
 </section>
 
 <section id="app" class="hidden">
   <nav id="nav"></nav>
-  <main id="view"></main>
+  <div class="content">
+    <div class="topbar" id="topbar"></div>
+    <main id="view"></main>
+  </div>
 </section>
 
 <script>
-// Built sections render live data; planned sections describe what they will hold.
+"use strict";
+
+// Icons are constant path data, never built from server data
+const ICONS = {
+  flame: "M12 2c1 3 4 5.5 4 9.5a4 4 0 0 1-8 0c0-2 1-3.3 2-4.3 0 2 1 3 2 3 0-3-1-5.2 0-8.2z",
+  bell: "M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9M10.3 21a1.94 1.94 0 0 0 3.4 0",
+  doc: "M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8zM14 2v6h6M16 13H8M16 17H8",
+  phone: "M22 16.9v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3.1 19.5 19.5 0 0 1-6-6A19.8 19.8 0 0 1 2.1 4.2 2 2 0 0 1 4.1 2h3a2 2 0 0 1 2 1.7c.1.9.4 1.8.7 2.7a2 2 0 0 1-.5 2.1L8 9.8a16 16 0 0 0 6 6l1.3-1.3a2 2 0 0 1 2.1-.4c.9.3 1.8.6 2.7.7a2 2 0 0 1 1.7 2z",
+  user: "M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2M12 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8z",
+  wrench: "M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.8-3.8a6 6 0 0 1-7.9 7.9l-6.9 6.9a2.1 2.1 0 0 1-3-3l6.9-6.9a6 6 0 0 1 7.9-7.9z",
+  shield: "M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10zM9 12l2 2 4-4",
+  clipboard: "M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2M9 2h6v4H9zM9 12h6M9 16h4",
+  check: "M22 11.1V12a10 10 0 1 1-5.9-9.1M22 4 12 14l-3-3",
+  pulse: "M22 12h-4l-3 9L9 3l-3 9H2",
+  list: "M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01",
+  activity: "M3 3v18h18M7 14l4-4 4 4 5-6",
+  link: "M10 13a5 5 0 0 0 7.5.5l3-3a5 5 0 0 0-7-7l-1.7 1.7M14 11a5 5 0 0 0-7.5-.5l-3 3a5 5 0 0 0 7 7l1.7-1.7",
+  map: "M1 6v16l7-4 8 4 7-4V2l-7 4-8-4-7 4zM8 2v16M16 6v16",
+};
+const TYPE_ICON = { alarm: "bell", briefing: "doc", call: "phone", user: "user", agent: "flame", tool: "wrench", action: "shield", postmortem: "clipboard" };
+const TYPE_LABEL = { alarm: "Alarm", briefing: "Briefing", call: "Call", user: "Engineer", agent: "Pilot Light", tool: "Tool", action: "Action", postmortem: "Postmortem" };
+
 const NAV = [
   { group: "Operate", items: [
-    { id: "overview", label: "Overview" },
-    { id: "incidents", label: "Incidents" },
-    { id: "events", label: "Events" },
-    { id: "links", label: "Links" },
+    { id: "live", label: "Live incident", icon: "pulse" },
+    { id: "incidents", label: "Incidents", icon: "list" },
+    { id: "events", label: "Events", icon: "activity" },
+    { id: "links", label: "Consoles", icon: "link" },
   ]},
-  { group: "Respond", items: [
-    { id: "oncall", label: "On-call schedule", planned: ["Rotations and escalation chains per service", "Override shifts and swap requests", "Who gets called first, second, and the manager fallback"] },
-    { id: "calls", label: "Calls", planned: ["Every voice call with duration, outcome, and who answered", "Full transcript with agent tool calls inline", "Audio playback of the call recording"] },
-    { id: "remediations", label: "Remediations", planned: ["The allowlist of fixes the agent may run", "History of every executed fix: who confirmed, when, result", "Dry-run and approval rules per action"] },
-    { id: "runbooks", label: "Runbooks", planned: ["Runbooks in Box mapped to alarms by metadata", "Ask a runbook a question (Box AI) from the browser", "Coverage: alarms without a runbook"] },
-  ]},
-  { group: "Learn", items: [
-    { id: "postmortems", label: "Postmortems", planned: ["Drafted postmortems with Box review task status", "Action items extracted and tracked to done", "Search across past incidents"] },
-    { id: "analytics", label: "Analytics", planned: ["MTTA and MTTR per service and per week", "Time from alarm to call to fix", "Most frequent alarms and noisy services"] },
-  ]},
-  { group: "Configure", items: [
-    { id: "services", label: "Services", planned: ["Service catalog with owners and dependencies", "Health and alarm rules per service", "Feature flags and recent config changes"] },
-    { id: "alarms", label: "Alarm rules", planned: ["Edit thresholds and windows (today: 3 errors in 10s)", "Silence and maintenance windows", "Test an alarm without paging anyone"] },
-    { id: "integrations", label: "Integrations", planned: ["AWS, Box, Twilio, Bedrock connection status", "Slack and Teams incident channels", "PagerDuty, Jira, and GitHub hooks"] },
-    { id: "team", label: "Team and access", planned: ["Users, roles, and SSO sign-in", "Phone numbers and notification preferences", "Audit log of dashboard actions"] },
-    { id: "settings", label: "Settings", planned: ["Voice, language, and agent persona", "Data retention for logs and transcripts", "API keys and webhooks"] },
-  ]},
+  { group: "Product", items: [{ id: "roadmap", label: "Roadmap", icon: "map" }] },
 ];
 
+const ROADMAP = [
+  ["Respond", ["On-call rotations and escalation chains per service", "Call history with recordings and inline tool calls", "Remediation catalog with per-action approval rules"]],
+  ["Learn", ["Postmortem action items tracked to done", "MTTA and MTTR per service", "Search across past incidents"]],
+  ["Configure", ["Service catalog with owners and alarm rules", "Slack, Teams, PagerDuty and Jira integrations", "SSO sign-in and role-based access"]],
+];
+
+const POLL_MS = 2000;
 const $ = (s) => document.querySelector(s);
-const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
-const time = (ts) => new Date(ts).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit" });
-const dateTime = (ts) => new Date(ts).toLocaleString([], { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" });
-let user = null, timer = null;
+let user = null;
+let viewToken = 0;
+let lastOk = 0;
+
+// DOM builder: strings become text nodes, so server data is never parsed as HTML
+function h(tag, attrs, ...kids) {
+  const el = document.createElement(tag);
+  for (const [k, v] of Object.entries(attrs || {})) {
+    if (v == null || v === false) continue;
+    if (k === "class") el.className = v;
+    else if (k === "href") { const u = safeUrl(v); if (u) el.setAttribute("href", u); }
+    else if (k === "onclick") el.addEventListener("click", v);
+    else if (k === "style") el.style.cssText = String(v);  // constant strings from this file only
+    else if (k.startsWith("data-") || ["id", "title", "target", "rel", "type", "role"].includes(k)) el.setAttribute(k, String(v));
+  }
+  for (const kid of kids.flat(Infinity)) {
+    if (kid == null || kid === false) continue;
+    el.append(kid instanceof Node ? kid : document.createTextNode(String(kid)));
+  }
+  return el;
+}
+
+function safeUrl(v) {
+  const s = String(v || "");
+  if (s.startsWith("#")) return s;
+  try {
+    const u = new URL(s, location.origin);
+    return (u.protocol === "https:" || u.protocol === "http:") ? u.href : "";
+  } catch { return ""; }
+}
+
+function icon(name) {
+  const NS = "http://www.w3.org/2000/svg";
+  const svg = document.createElementNS(NS, "svg");
+  svg.setAttribute("viewBox", "0 0 24 24"); svg.setAttribute("fill", "none"); svg.setAttribute("stroke", "currentColor");
+  svg.setAttribute("stroke-width", "2"); svg.setAttribute("stroke-linecap", "round"); svg.setAttribute("stroke-linejoin", "round");
+  svg.setAttribute("aria-hidden", "true");
+  const p = document.createElementNS(NS, "path");
+  p.setAttribute("d", ICONS[name] || ICONS.doc);
+  svg.append(p);
+  return svg;
+}
+
+function extLink(label, url, detail) {
+  const u = safeUrl(url);
+  if (!u) return h("div", { class: "link-row muted" }, label, h("span", { class: "muted" }, detail || "Not configured"));
+  return h("a", { class: "link-row", href: u, target: "_blank", rel: "noopener noreferrer" }, label, h("span", { class: "muted" }, detail || ""));
+}
+
+const toDate = (ts) => new Date(typeof ts === "number" ? ts : String(ts || ""));
+const valid = (d) => !isNaN(d.getTime());
+const clock = (ts) => { const d = toDate(ts); return valid(d) ? d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit" }) : ""; };
+const dateTime = (ts) => { const d = toDate(ts); return valid(d) ? d.toLocaleString([], { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" }) : ""; };
+const num = (v) => Number.isFinite(Number(v)) ? Number(v) : 0;
+
+function elapsed(startedAt) {
+  const d = toDate(startedAt);
+  if (!valid(d)) return "";
+  let s = Math.max(0, Math.floor((Date.now() - d.getTime()) / 1000));
+  const hh = Math.floor(s / 3600); s -= hh * 3600;
+  const mm = Math.floor(s / 60); s -= mm * 60;
+  return (hh ? hh + "h " : "") + String(mm).padStart(2, "0") + "m " + String(s).padStart(2, "0") + "s";
+}
+
+function pill(v) {
+  const val = String(v ?? "UNKNOWN");
+  const cls = { ALARM: "bad", OK: "ok", open: "bad", resolved: "ok", on: "bad", off: "ok" }[val] || "warn";
+  return h("span", { class: "pill " + cls }, val);
+}
+
+class SignedOut extends Error {}
 
 async function api(path, opts = {}) {
   const r = await fetch(path, { headers: { "Content-Type": "application/json" }, credentials: "same-origin", ...opts });
-  if (r.status === 401) { showLogin(); throw new Error("signed out"); }
-  if (!r.ok) throw new Error((await r.json().catch(() => ({}))).detail || r.statusText);
+  if (r.status === 401) { showLogin(); throw new SignedOut("signed out"); }
+  if (!r.ok) throw new Error((await r.json().catch(() => ({}))).detail || r.statusText || "Request failed");
+  lastOk = Date.now();
   return r.json();
 }
 
+function setView(...nodes) { $("#view").replaceChildren(...nodes); }
+
 function showLogin() {
-  clearInterval(timer);
+  viewToken++;
+  user = null;
   $("#app").classList.add("hidden");
   $("#login").classList.remove("hidden");
   $("#username").focus();
@@ -171,144 +361,310 @@ function showLogin() {
 
 $("#login-form").addEventListener("submit", async (e) => {
   e.preventDefault();
-  $("#login-error").textContent = "";
-  const r = await fetch("/api/login", { method: "POST", headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ username: $("#username").value, password: $("#password").value }) });
-  if (!r.ok) { $("#login-error").textContent = "Invalid username or password."; return; }
-  user = (await r.json()).user;
-  $("#password").value = "";
-  start();
+  const err = $("#login-error"), btn = $("#login-btn");
+  err.textContent = "";
+  btn.disabled = true;
+  try {
+    const r = await fetch("/api/login", { method: "POST", headers: { "Content-Type": "application/json" }, credentials: "same-origin",
+      body: JSON.stringify({ username: $("#username").value, password: $("#password").value }) });
+    if (r.status === 401) { err.textContent = "Invalid username or password."; return; }
+    if (!r.ok) { err.textContent = "Sign-in is unavailable right now. Try again."; return; }
+    const me = await fetch("/api/me", { credentials: "same-origin" });
+    if (!me.ok) { err.textContent = "Signed in, but the session cookie was not accepted. Check DASHBOARD_SECRET on the server."; return; }
+    user = (await me.json()).user;
+    $("#password").value = "";
+    start();
+  } catch {
+    err.textContent = "Cannot reach the server.";
+  } finally {
+    btn.disabled = false;
+  }
 });
 
 function renderNav(active) {
-  const groups = NAV.map((g) => `<div class="nav-group">${g.group}</div>` + g.items.map((i) =>
-    `<button class="nav-item ${i.planned ? "planned" : ""} ${i.id === active ? "active" : ""}" data-id="${i.id}">
-       <span>${i.label}</span>${i.planned ? '<span class="soon">Soon</span>' : ""}</button>`).join("")).join("");
-  $("#nav").innerHTML = `<div class="brand"><div class="flame"></div>Pilot Light</div>${groups}
-    <div class="nav-foot"><span class="muted">${esc(user)}</span><button class="link-btn" id="logout">Sign out</button></div>`;
-  $("#nav").querySelectorAll(".nav-item").forEach((b) => b.onclick = () => { location.hash = b.dataset.id; });
-  $("#logout").onclick = async () => { await fetch("/api/logout", { method: "POST" }); user = null; showLogin(); };
+  const kids = [h("div", { class: "brand" }, flame(), "Pilot Light")];
+  for (const g of NAV) {
+    kids.push(h("div", { class: "nav-group" }, g.group));
+    for (const i of g.items) {
+      kids.push(h("button", { class: "nav-item" + (i.id === active ? " active" : ""), type: "button",
+        onclick: () => { location.hash = i.id; } }, icon(i.icon), h("span", {}, i.label)));
+    }
+  }
+  kids.push(h("div", { class: "nav-foot" }, h("span", { class: "who muted", title: user || "" }, user || ""),
+    h("button", { class: "link-btn", type: "button", onclick: logout }, "Sign out")));
+  $("#nav").replaceChildren(...kids);
+}
+
+async function logout() {
+  try { await fetch("/api/logout", { method: "POST", credentials: "same-origin" }); } catch { /* signing out locally either way */ }
+  showLogin();
+}
+
+function flame() { const f = h("div", { class: "flame" }); f.append(icon("flame")); return f; }
+
+function renderTopbar(s) {
+  const stale = lastOk && Date.now() - lastOk > POLL_MS * 4;
+  const kids = [
+    h("span", { class: "svc" }, "checkout-api"),
+    h("span", { class: "muted" }, "Alarm"), pill(s ? s.alarm_state : "UNKNOWN"),
+    h("span", { class: "muted" }, "fail_mode"), pill(s ? s.fail_mode : "UNKNOWN"),
+  ];
+  if (s && s.source) kids.push(h("span", { class: "dim mono" }, "source: " + s.source));
+  kids.push(h("span", { class: "spacer" }),
+    h("span", { class: "live-dot" + (stale ? " stale" : "") }, h("i"), stale ? "Reconnecting" : "Live"),
+    h("span", { class: "muted mono" }, new Date().toLocaleTimeString()));
+  $("#topbar").replaceChildren(...kids);
+}
+
+// Poll fn every POLL_MS without overlapping requests; stops when the view changes
+function poll(fn) {
+  const token = ++viewToken;
+  const tick = async () => {
+    if (token !== viewToken) return;
+    try { await fn(token); }
+    catch (e) {
+      if (e instanceof SignedOut || token !== viewToken) return;
+      showError(e);
+    }
+    if (token === viewToken) setTimeout(tick, POLL_MS);
+  };
+  tick();
+}
+
+function once(fn) {
+  const token = ++viewToken;
+  fn(token).catch((e) => { if (!(e instanceof SignedOut) && token === viewToken) showError(e); });
+}
+
+function showError(e) {
+  setView(h("div", { class: "banner" }, h("b", {}, "Error"), h("span", {}, e.message || String(e))));
 }
 
 function route() {
-  clearInterval(timer);
-  const [id, arg] = (location.hash.slice(1) || "overview").split("/");
-  renderNav(id);
-  const views = { overview, incidents, events, links };
-  const planned = NAV.flatMap((g) => g.items).find((i) => i.id === id && i.planned);
-  if (planned) return plannedView(planned);
-  if (id === "incidents" && arg) return incidentDetail(decodeURIComponent(arg));
-  const fn = views[id] || overview;
-  const run = () => fn().catch((e) => { if (e.message !== "signed out") $("#view").innerHTML = `<div class="error">${esc(e.message)}</div>`; });
-  run();
-  if (id === "overview" || id === "events") timer = setInterval(run, 5000);
+  if (!user) return;
+  const raw = location.hash.slice(1) || "live";
+  const slash = raw.indexOf("/");
+  const id = slash < 0 ? raw : raw.slice(0, slash);
+  const arg = slash < 0 ? "" : decodeURIComponent(raw.slice(slash + 1));
+  renderNav(id === "incidents" && arg ? "incidents" : id);
+  if (id === "incidents" && arg) return poll((t) => incidentDetail(t, arg));
+  const views = { live, incidents, events, links, roadmap };
+  const fn = views[id] || live;
+  if (fn === live || fn === events) return poll(fn);
+  return once(fn);
 }
 
-function statusPill(v) {
-  const cls = { ALARM: "bad", OK: "ok", open: "bad", resolved: "ok", on: "bad", off: "ok" }[v] || "warn";
-  return `<span class="pill ${cls}">${esc(v)}</span>`;
-}
-
-function incidentRows(list) {
-  if (!list.length) return `<div class="empty">No incidents yet. Run scripts/break.sh to open one.</div>`;
-  return `<div class="table-wrap"><table><thead><tr><th>Incident</th><th>Service</th><th>Alarm</th><th>Started</th><th>Status</th></tr></thead><tbody>` +
-    list.map((i) => `<tr class="click" data-id="${esc(i.incident_id)}"><td class="mono">${esc(i.incident_id)}</td><td>${esc(i.service)}</td>
-      <td class="mono">${esc(i.alarm_name)}</td><td>${dateTime(i.started_at)}</td><td>${statusPill(i.status)}</td></tr>`).join("") +
-    `</tbody></table></div>`;
-}
-
-function bindRows() {
-  document.querySelectorAll("tr.click").forEach((r) => r.onclick = () => { location.hash = "incidents/" + encodeURIComponent(r.dataset.id); });
-}
-
-function offline(ev) {
-  return ev.aws_connected ? "" : `<div class="card" style="margin-bottom:16px"><span class="pill warn">Not connected</span>
-    <span class="muted">&nbsp;This deployment has no AWS access, so live data is empty.</span></div>`;
+function offlineBanner(ev) {
+  if (!ev || ev.aws_connected) return null;
+  return h("div", { class: "banner" }, h("b", {}, "Live data unavailable."),
+    h("span", {}, "This deployment cannot reach CloudWatch Logs, so errors and timelines may be empty."));
 }
 
 function chart(ev) {
-  const max = Math.max(1, ...ev.error_buckets);
-  const mins = ev.error_buckets.length * ev.bucket_seconds / 60;
-  return `<div class="bars">${ev.error_buckets.map((v) =>
-    `<div class="bar ${v ? "" : "zero"}" style="height:${v ? Math.max(4, v / max * 100) : 2}%" title="${v} errors"></div>`).join("")}</div>
-    <div class="axis"><span>${mins} min ago</span><span>peak ${max}/${ev.bucket_seconds}s</span><span>now</span></div>`;
+  const vals = (ev.error_buckets || []).map(num);
+  const n = Math.max(vals.length, 1), max = Math.max(1, ...vals);
+  const NS = "http://www.w3.org/2000/svg", W = n * 10, H = 100;
+  const svg = document.createElementNS(NS, "svg");
+  svg.setAttribute("viewBox", `0 0 ${W} ${H}`); svg.setAttribute("preserveAspectRatio", "none"); svg.setAttribute("role", "img");
+  svg.setAttribute("aria-label", "Checkout errors over time");
+  for (const y of [25, 50, 75]) {
+    const l = document.createElementNS(NS, "line");
+    l.setAttribute("x1", 0); l.setAttribute("x2", W); l.setAttribute("y1", y); l.setAttribute("y2", y);
+    l.setAttribute("stroke", "#262c39"); l.setAttribute("stroke-width", "0.5"); l.setAttribute("vector-effect", "non-scaling-stroke");
+    svg.append(l);
+  }
+  vals.forEach((v, i) => {
+    const r = document.createElementNS(NS, "rect");
+    const bh = v ? Math.max(3, (v / max) * (H - 6)) : 1.5;
+    r.setAttribute("x", i * 10 + 1.5); r.setAttribute("width", 7); r.setAttribute("y", H - bh); r.setAttribute("height", bh);
+    r.setAttribute("rx", 1.5); r.setAttribute("fill", v ? "#ff4d5e" : "#323a4a");
+    const t = document.createElementNS(NS, "title"); t.textContent = v + " errors"; r.append(t);
+    svg.append(r);
+  });
+  const mins = Math.round(vals.length * num(ev.bucket_seconds) / 60);
+  const wrap = h("div", { class: "chart" });
+  wrap.append(svg);
+  return h("div", {}, wrap, h("div", { class: "axis" }, h("span", {}, mins + " min ago"),
+    h("span", {}, "peak " + max + " per " + num(ev.bucket_seconds) + "s"), h("span", {}, "now")));
 }
 
-async function overview() {
+function statCard(label, value, foot, alert) {
+  return h("div", { class: "card" + (alert ? " alert" : "") }, h("div", { class: "stat-label" }, label),
+    h("div", { class: "stat" }, value), h("div", { class: "muted" }, foot));
+}
+
+function guardrails() {
+  const row = (t, d) => h("li", {}, icon("check"), h("div", {}, h("b", {}, t), h("span", {}, d)));
+  return h("div", { class: "card" }, h("h2", {}, icon("shield"), "Guardrails"),
+    h("ul", { class: "checks" },
+      row("Allowlisted action only", "The agent can run one fix: revert_fail_mode. Anything else is refused."),
+      row("Verbal confirm enforced in code", "The fix runs only after the engineer says confirm on the call."),
+      row("Every action audited", "Recorded in CloudWatch Logs and in the Box incident folder.")));
+}
+
+function timelineList(rows, opts = {}) {
+  if (!rows.length) return h("div", { class: "empty" }, opts.empty || "No timeline entries yet.");
+  return h("ul", { class: "vt" }, rows.map((t) => {
+    const type = TYPE_ICON[t.type] ? t.type : "tool";
+    const big = t.type === "user" || t.type === "agent";
+    const ic = h("div", { class: "ic" }); ic.append(icon(TYPE_ICON[type]));
+    return h("li", { class: "ty-" + type + (big ? " big" : "") }, ic,
+      h("div", {}, h("div", { class: "meta" }, h("span", { class: "type" }, TYPE_LABEL[type] || String(t.type || "")),
+        h("span", { class: "dim mono" }, clock(t.ts))), h("div", { class: "body" }, t.text)));
+  }));
+}
+
+function transcript(rows) {
+  const msgs = rows.filter((t) => t.type === "user" || t.type === "agent");
+  if (!msgs.length) return h("div", { class: "empty" }, "The call transcript appears here as the engineer and Pilot Light talk.");
+  const box = h("div", { class: "transcript" }, msgs.map((t) => {
+    const av = h("div", { class: "av" }); av.append(icon(t.type === "agent" ? "flame" : "user"));
+    return h("div", { class: "msg " + t.type }, av, h("div", {},
+      h("div", { class: "who" }, h("span", {}, t.type === "agent" ? "Pilot Light" : "Engineer"), h("span", { class: "dim mono" }, clock(t.ts))),
+      h("div", { class: "txt" }, t.text)));
+  }));
+  requestAnimationFrame(() => { box.scrollTop = box.scrollHeight; });
+  return box;
+}
+
+function recordsCard(inc, links, rows) {
+  const has = (pred) => rows.some(pred);
+  const items = [
+    ["Briefing", has((r) => r.type === "briefing")],
+    ["Call transcript", has((r) => r.type === "user" || r.type === "agent")],
+    ["Remediation", has((r) => r.type === "action")],
+    ["Postmortem and review task", has((r) => r.type === "postmortem")],
+  ];
+  return h("div", { class: "card" }, h("h2", {}, icon("doc"), "Incident record"),
+    h("ul", { class: "checks" }, items.map(([label, done]) => {
+      const ic = icon(done ? "check" : "pulse");
+      if (!done) ic.style.color = "var(--dim)";
+      return h("li", {}, ic, h("div", {}, h("b", { class: done ? "" : "muted" }, label), h("span", {}, done ? "Recorded" : "Pending")));
+    })),
+    h("div", { style: "margin-top:10px" }),
+    extLink("Box incident folder", links && links.box_folder, "Briefing, transcript, timeline, postmortem"),
+    extLink("Timeline in CloudWatch Logs", links && links.timeline_logs, "Raw log stream"));
+}
+
+async function live(token) {
   const [s, ev] = await Promise.all([api("/api/status"), api("/api/events?minutes=15")]);
-  const latest = s.latest;
-  $("#view").innerHTML = `
-    <h1>Overview</h1><p class="sub">checkout-api, refreshed every 5 seconds</p>${offline(ev)}
-    <div class="grid cards">
-      <div class="card"><div class="stat-label">Alarm ${esc(s.alarm_name)}</div><div class="stat">${statusPill(s.alarm_state)}</div><div class="muted">${esc(s.alarm_rule)}</div></div>
-      <div class="card"><div class="stat-label">fail_mode flag</div><div class="stat">${statusPill(s.fail_mode)}</div><div class="muted">The break switch</div></div>
-      <div class="card"><div class="stat-label">Open incidents</div><div class="stat">${s.incidents_open}</div><div class="muted">${s.incidents_total} total</div></div>
-      <div class="card"><div class="stat-label">Errors, last 15 min</div><div class="stat">${ev.errors_total}</div><div class="muted">Voice calls ${s.voice_server ? "enabled" : "disabled"}</div></div>
-    </div>
-    <div class="grid cards">
-      <div class="card"><h2>Checkout errors</h2>${chart(ev)}</div>
-      <div class="card"><h2>Latest incident</h2>${latest ? `
-        <div class="mono"><a href="#incidents/${encodeURIComponent(latest.incident_id)}">${esc(latest.incident_id)}</a> ${statusPill(latest.status)}</div>
-        <p>${esc(latest.briefing_text)}</p><div class="muted">Started ${dateTime(latest.started_at)}</div>` : '<div class="empty">None yet.</div>'}</div>
-    </div>`;
+  let detail = null;
+  if (s.latest && s.latest.incident_id) detail = await api("/api/incidents/" + encodeURIComponent(s.latest.incident_id));
+  if (token !== viewToken) return;
+  renderTopbar(s);
+  const alarm = s.alarm_state === "ALARM";
+  const cards = h("div", { class: "grid cards" },
+    statCard("Alarm " + (s.alarm_name || ""), pill(s.alarm_state), s.alarm_rule || "", alarm),
+    statCard("fail_mode flag", pill(s.fail_mode), "The break switch", s.fail_mode === "on"),
+    statCard("Open incidents", String(num(s.incidents_open)), num(s.incidents_total) + " total", num(s.incidents_open) > 0),
+    statCard("Errors, last 15 min", String(num(ev.errors_total)), "Voice calls " + (s.voice_server ? "enabled" : "not configured")));
+
+  let incidentBlock;
+  if (detail) {
+    const i = detail.incident || {};
+    const rows = Array.isArray(detail.timeline) ? detail.timeline : [];
+    const open = i.status === "open";
+    const head = h("div", { class: "card" + (open ? " alert" : ""), style: "margin-bottom:16px" },
+      h("div", { class: "inc-head" }, h("span", { class: "id mono" }, i.incident_id || ""), pill(i.status),
+        h("span", { class: "muted" }, (i.service || "") + "  |  " + (i.alarm_name || "")),
+        h("span", { class: "spacer", style: "flex:1" }),
+        h("span", { class: "elapsed mono" }, open ? "Open for " + elapsed(i.started_at) : "Started " + dateTime(i.started_at))),
+      h("p", { class: "briefing" }, i.briefing_text || ""));
+    const systemRows = rows.filter((t) => t.type !== "user" && t.type !== "agent");
+    incidentBlock = [head,
+      h("div", { class: "grid two" },
+        h("div", { class: "card" }, h("h2", {}, icon("phone"), "Call transcript"), transcript(rows)),
+        h("div", { class: "card" }, h("h2", {}, icon("pulse"), "Incident timeline"), h("div", { class: "scroll" }, timelineList(systemRows))))];
+    incidentBlock.push(h("div", { class: "grid two" },
+      h("div", { class: "card" }, h("h2", {}, icon("activity"), "Checkout errors, last 15 min"), chart(ev)),
+      h("div", { class: "grid", style: "align-content:start" }, recordsCard(i, detail.links, rows), guardrails())));
+  } else {
+    incidentBlock = [h("div", { class: "grid two" },
+      h("div", { class: "card" }, h("h2", {}, icon("activity"), "Checkout errors, last 15 min"), chart(ev),
+        h("div", { class: "empty" }, "No incidents yet. When the alarm fires, the live incident appears here.")),
+      guardrails())];
+  }
+  setView(offlineBanner(ev) || "", cards, ...incidentBlock);
 }
 
-async function incidents() {
+async function incidents(token) {
   const list = await api("/api/incidents");
-  $("#view").innerHTML = `<h1>Incidents</h1><p class="sub">Every alarm the watcher turned into an incident</p><div class="card">${incidentRows(list)}</div>`;
-  bindRows();
+  if (token !== viewToken) return;
+  renderTopbar(null);
+  const rows = Array.isArray(list) ? list : [];
+  const body = rows.length
+    ? h("div", { class: "table-wrap" }, h("table", {},
+        h("thead", {}, h("tr", {}, ["Incident", "Service", "Alarm", "Started", "Status"].map((c) => h("th", {}, c)))),
+        h("tbody", {}, rows.map((i) => h("tr", { class: "click", onclick: () => { location.hash = "incidents/" + encodeURIComponent(i.incident_id || ""); } },
+          h("td", { class: "mono" }, i.incident_id || ""), h("td", {}, i.service || ""), h("td", { class: "mono" }, i.alarm_name || ""),
+          h("td", {}, dateTime(i.started_at)), h("td", {}, pill(i.status)))))))
+    : h("div", { class: "empty" }, "No incidents yet. They appear here when the alarm fires.");
+  setView(h("h1", {}, "Incidents"), h("p", { class: "sub" }, "Every alarm the watcher turned into an incident"), h("div", { class: "card" }, body));
 }
 
-async function incidentDetail(id) {
-  $("#view").innerHTML = `<div class="muted">Loading ${esc(id)}...</div>`;
-  const d = await api("/api/incidents/" + encodeURIComponent(id));
-  const i = d.incident;
-  $("#view").innerHTML = `
-    <a class="back" href="#incidents">&larr; All incidents</a>
-    <h1 class="mono">${esc(i.incident_id)} ${statusPill(i.status)}</h1>
-    <p class="sub">${esc(i.service)} &middot; ${esc(i.alarm_name)} &middot; started ${dateTime(i.started_at)}</p>
-    <div class="grid cards">
-      <div class="card"><h2>Briefing</h2><p>${esc(i.briefing_text)}</p></div>
-      <div class="card"><h2>Records</h2>
-        ${d.links.box_folder ? `<a class="link-row" href="${esc(d.links.box_folder)}" target="_blank" rel="noopener">Box incident folder<span class="muted">Briefing, transcript, postmortem</span></a>` : ""}
-        <a class="link-row" href="${esc(d.links.timeline_logs)}" target="_blank" rel="noopener">Timeline in CloudWatch Logs<span class="muted">Raw log stream</span></a>
-      </div>
-    </div>
-    <div class="card"><h2>Timeline</h2>${d.timeline.length ? `<ul class="timeline">${d.timeline.map((t) =>
-      `<li><span class="mono muted">${time(t.ts)}</span><span class="t-type t-${esc(t.type)}">${esc(t.type)}</span><span>${esc(t.text)}</span></li>`).join("")}</ul>`
-      : '<div class="empty">No timeline rows.</div>'}</div>`;
+async function incidentDetail(token, id) {
+  const [s, d] = await Promise.all([api("/api/status"), api("/api/incidents/" + encodeURIComponent(id))]);
+  if (token !== viewToken) return;
+  renderTopbar(s);
+  const i = d.incident || {};
+  const rows = Array.isArray(d.timeline) ? d.timeline : [];
+  setView(
+    h("a", { class: "back", href: "#incidents" }, "All incidents"),
+    h("div", { class: "inc-head" }, h("h1", { class: "mono" }, i.incident_id || id), pill(i.status)),
+    h("p", { class: "sub" }, (i.service || "") + "  |  " + (i.alarm_name || "") + "  |  started " + dateTime(i.started_at)),
+    h("div", { class: "grid two" },
+      h("div", { class: "card" }, h("h2", {}, icon("pulse"), "Timeline"), timelineList(rows, { empty: "No timeline entries for this incident." })),
+      h("div", { class: "grid", style: "align-content:start" },
+        h("div", { class: "card" }, h("h2", {}, icon("doc"), "Briefing"), h("p", { class: "briefing" }, i.briefing_text || "No briefing recorded.")),
+        recordsCard(i, d.links, rows), guardrails())));
 }
 
-async function events() {
-  const ev = await api("/api/events?minutes=30");
-  $("#view").innerHTML = `
-    <h1>Events</h1><p class="sub">Checkout errors (last 30 min) and config changes (last 24h), refreshed every 5 seconds</p>${offline(ev)}
-    <div class="card" style="margin-bottom:16px"><h2>Errors per ${ev.bucket_seconds}s</h2>${chart(ev)}</div>
-    <div class="card"><h2>Feed</h2>${ev.feed.length ? `<ul class="feed">${ev.feed.map((f) =>
-      `<li><span class="mono muted">${time(f.ts)}</span><span class="pill ${f.kind === "error" ? "bad" : "info"}">${f.kind}</span><span class="mono">${esc(f.text)}</span></li>`).join("")}</ul>`
-      : '<div class="empty">Quiet. No errors or config changes.</div>'}</div>`;
+async function events(token) {
+  const [s, ev] = await Promise.all([api("/api/status"), api("/api/events?minutes=30")]);
+  if (token !== viewToken) return;
+  renderTopbar(s);
+  const feed = Array.isArray(ev.feed) ? ev.feed : [];
+  setView(
+    h("h1", {}, "Events"), h("p", { class: "sub" }, "Checkout errors (last 30 min) and config changes (last 24 hours)"),
+    offlineBanner(ev) || "",
+    h("div", { class: "card", style: "margin-bottom:16px" }, h("h2", {}, icon("activity"), "Errors per " + num(ev.bucket_seconds) + "s"), chart(ev)),
+    h("div", { class: "card" }, h("h2", {}, icon("list"), "Feed"), feed.length
+      ? h("ul", { class: "feed" }, feed.map((f) => h("li", {}, h("span", { class: "mono muted" }, clock(f.ts)),
+          h("span", { class: "pill " + (f.kind === "error" ? "bad" : "info") }, f.kind === "error" ? "error" : "config"),
+          h("span", { class: "mono" }, f.text))))
+      : h("div", { class: "empty" }, "Quiet. No errors or config changes.")));
 }
 
-async function links() {
+async function links(token) {
   const d = await api("/api/links");
-  $("#view").innerHTML = `<h1>Links</h1><p class="sub">Consoles behind Pilot Light. Opens in a new tab; AWS links need the pilotlight account signed in.</p>
-    <div class="grid links">${d.sections.map((s) => `<div class="card"><h2>${esc(s.title)}</h2>${s.links.map((l) => l.url
-      ? `<a class="link-row" href="${esc(l.url)}" target="_blank" rel="noopener">${esc(l.label)}<span class="muted">${esc(l.detail)}</span></a>`
-      : `<div class="link-row muted">${esc(l.label)}<span class="muted">Not configured</span></div>`).join("")}</div>`).join("")}</div>`;
+  if (token !== viewToken) return;
+  renderTopbar(null);
+  const sections = Array.isArray(d.sections) ? d.sections : [];
+  setView(h("h1", {}, "Consoles"),
+    h("p", { class: "sub" }, "The systems behind Pilot Light. Links open in a new tab; AWS links need the Pilot Light account signed in."),
+    h("div", { class: "grid links" }, sections.map((s) => h("div", { class: "card" }, h("h2", {}, s.title || ""),
+      (Array.isArray(s.links) ? s.links : []).map((l) => extLink(l.label || "", l.url, l.detail))))));
 }
 
-function plannedView(item) {
-  $("#view").innerHTML = `<h1>${esc(item.label)} <span class="soon">Planned</span></h1><p class="sub">Not built yet. This section will hold:</p>
-    <div class="card planned-box"><ul>${item.planned.map((p) => `<li>${esc(p)}</li>`).join("")}</ul></div>`;
+async function roadmap(token) {
+  if (token !== viewToken) return;
+  renderTopbar(null);
+  setView(h("h1", {}, "Roadmap ", h("span", { class: "tag" }, "Not built yet")),
+    h("p", { class: "sub" }, "Planned capabilities beyond the hackathon build. Nothing on this page is live."),
+    h("div", { class: "grid links" }, ROADMAP.map(([title, items]) =>
+      h("div", { class: "card" }, h("h2", {}, title), h("ul", { class: "roadmap" }, items.map((x) => h("li", {}, x)))))));
 }
 
-async function start() {
+function start() {
   $("#login").classList.add("hidden");
   $("#app").classList.remove("hidden");
   route();
 }
 
-window.addEventListener("hashchange", () => user && route());
+// Static brand marks in the login markup
+document.querySelectorAll("[data-icon]").forEach((el) => el.append(icon(el.dataset.icon === "flame" ? "flame" : el.dataset.icon)));
+
+window.addEventListener("hashchange", route);
 fetch("/api/me", { credentials: "same-origin" }).then(async (r) => {
   if (r.ok) { user = (await r.json()).user; start(); } else showLogin();
 }).catch(showLogin);

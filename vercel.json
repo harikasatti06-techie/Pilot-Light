@@ -1,6 +1,0 @@
-{
-  "functions": {
-    "api/index.py": { "includeFiles": "{dashboard,pilotlight}/**" }
-  },
-  "rewrites": [{ "source": "/(.*)", "destination": "/api/index" }]
-}
