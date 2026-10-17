@@ -7,8 +7,8 @@ Run once:
 
 import sys
 
-from box_sdk_gen import BoxAPIError
-from box_sdk_gen.schemas import (
+from box_sdk_gen.box.errors import BoxAPIError
+from box_sdk_gen.managers.metadata_templates import (
     CreateMetadataTemplateFields,
     CreateMetadataTemplateFieldsTypeField,
     CreateMetadataTemplateFieldsOptionsField,

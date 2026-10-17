@@ -12,13 +12,16 @@ from box_sdk_gen import (
     CCGConfig,
 )
 from box_sdk_gen.schemas import (
+    AiItemAsk,
+    AiItemAskTypeField,
     AiItemBase,
     AiItemBaseTypeField,
     AiResponseFull,
-    CreateAiAskItems,
+)
+from box_sdk_gen.managers.ai import (
     CreateAiAskMode,
     CreateAiTextGenItems,
-    MetadataFull,
+    CreateAiExtractStructuredMetadataTemplate,
 )
 from box_sdk_gen.managers.uploads import UploadFileAttributes, UploadFileAttributesParentField
 from box_sdk_gen.box.errors import BoxAPIError
@@ -111,9 +114,12 @@ def upload_text_file(folder_id: str, name: str, content: str) -> str:
 
 def create_subfolder(parent_folder_id: str, name: str) -> str:
     """Create a subfolder. If it already exists, return existing folder_id."""
+    from box_sdk_gen.managers.folders import CreateFolderParent
     client = get_client()
     try:
-        folder = client.folders.create_folder(name=name, parent_id=parent_folder_id)
+        folder = client.folders.create_folder(
+            name=name, parent=CreateFolderParent(id=parent_folder_id)
+        )
         return folder.id
     except BoxAPIError as exc:
         if exc.response_info.status_code == 409:
@@ -198,13 +204,14 @@ def ai_ask_multi(
     """
     client = get_client()
     items = [
-        AiItemBase(id=fid, type=AiItemBaseTypeField.FILE)
+        AiItemAsk(id=fid, type=AiItemAskTypeField.FILE)
         for fid in file_ids
     ]
     response: AiResponseFull = client.ai.create_ai_ask(
         mode=CreateAiAskMode.MULTIPLE_ITEM_QA,
         prompt=prompt,
         items=items,
+        include_citations=include_citations,
     )
     result: dict[str, Any] = {"answer": response.answer}
     if include_citations and hasattr(response, "citations"):
@@ -229,10 +236,10 @@ def ai_extract_structured(
     items = [AiItemBase(id=file_id, type=AiItemBaseTypeField.FILE)]
     response = client.ai.create_ai_extract_structured(
         items=items,
-        metadata_template={
-            "template_key": template_key,
-            "scope": scope,
-        },
+        metadata_template=CreateAiExtractStructuredMetadataTemplate(
+            template_key=template_key,
+            scope=scope,
+        ),
     )
     return response.to_dict() if hasattr(response, "to_dict") else vars(response)
 
@@ -256,26 +263,42 @@ def ai_text_gen(file_id: str, prompt: str) -> str:
 
 def create_review_task(file_id: str, message: str, reviewer_login: str) -> None:
     """Create a review task on a file and assign it to the reviewer."""
+    from box_sdk_gen.managers.tasks import CreateTaskItem, CreateTaskAction
+    from box_sdk_gen.managers.task_assignments import (
+        CreateTaskAssignmentTask,
+        CreateTaskAssignmentAssignTo,
+    )
     client = get_client()
     task = client.tasks.create_task(
-        item={"type": "file", "id": file_id},
+        item=CreateTaskItem(type="file", id=file_id),
         message=message,
-        action="review",
+        action=CreateTaskAction.REVIEW,
     )
-    client.tasks.create_task_assignment(
-        task_id=task.id,
-        assign_to={"login": reviewer_login},
+    client.task_assignments.create_task_assignment(
+        task=CreateTaskAssignmentTask(type="task", id=task.id),
+        assign_to=CreateTaskAssignmentAssignTo(login=reviewer_login),
     )
 
 
 def add_collaboration(folder_id: str, login: str, role: str = "editor") -> None:
     """Add a user as collaborator on a folder."""
+    from box_sdk_gen.managers.user_collaborations import (
+        CreateCollaborationItem,
+        CreateCollaborationItemTypeField,
+        CreateCollaborationAccessibleBy,
+        CreateCollaborationAccessibleByTypeField,
+        CreateCollaborationRole,
+    )
     client = get_client()
     try:
         client.user_collaborations.create_collaboration(
-            item={"type": "folder", "id": folder_id},
-            accessible_by={"type": "user", "login": login},
-            role=role,
+            item=CreateCollaborationItem(
+                type=CreateCollaborationItemTypeField.FOLDER, id=folder_id
+            ),
+            accessible_by=CreateCollaborationAccessibleBy(
+                type=CreateCollaborationAccessibleByTypeField.USER, login=login
+            ),
+            role=CreateCollaborationRole[role.upper()],
         )
     except BoxAPIError as exc:
         # 409 means the collaboration already exists -- safe to ignore
