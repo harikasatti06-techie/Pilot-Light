@@ -129,9 +129,14 @@ def main():
     if len(sys.argv) > 1:
         iid = sys.argv[1]
     else:
-        rec = incidents.latest()
+        # Try latest_open first (connect branch), fall back to latest (main branch)
+        rec = None
+        if hasattr(incidents, "latest_open"):
+            rec = incidents.latest_open()
+        if not rec and hasattr(incidents, "latest"):
+            rec = incidents.latest()
         if not rec:
-            sys.exit("No incidents found. Pass an incident ID or run after an incident.")
+            sys.exit("No incidents found. Pass an incident ID.")
         iid = rec["incident_id"]
         print(f"[auto_fix] Using latest incident: {iid}")
 
