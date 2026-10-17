@@ -6,7 +6,20 @@ Built for the Box + AWS Agentic Enterprise AI Hackathon, Seattle, Oct 16 to 17.
 
 When production breaks, Pilot Light **phones the on-call engineer**. A voice agent (Amazon Nova 2 Sonic) briefs them on what broke, answers questions using live AWS data and Box runbooks, and runs an approved fix only after the engineer says **"confirm."** Every step is recorded in a **Box incident folder**, and a **postmortem** is drafted automatically and assigned for review.
 
-> Status: hackathon build in progress. The tool contract in `pilotlight/tools.py` currently returns stub responses; real implementations land during integration.
+> Status: hackathon build in progress. See [Build status](#build-status).
+
+## Build status
+
+| Component | State |
+|---|---|
+| AWS infra (CDK stack, demo service, alarm, EventBridge, tables, dashboard) | Built, not yet deployed |
+| Incident Lambda (alarm to incident record and timeline) | Built, Box calls stubbed, call skipped until the voice server is up |
+| AWS tools (`query_logs`, `what_changed`, `execute_remediation`) | Built |
+| Box tools (`get_briefing`, `ask_runbook`, incident folder, runbook lookup) | Stubbed |
+| Voice agent and telephony | Not started |
+| Postmortem and Box review task | Not started |
+
+Detailed progress for contributors is tracked in [CLAUDE.md](CLAUDE.md).
 
 ## The demo in one line
 
@@ -166,6 +179,7 @@ Box files are created by the app's service account. Collaborate your own Box log
 ./scripts/break.sh        # flip the fail-mode flag on
 ./scripts/force_alarm.sh  # backup trigger if the alarm is slow
 ./scripts/fix.sh          # reset the flag between rehearsals
+./scripts/status.sh       # flag, alarm state, latest incident timeline
 ```
 
 Pre-flight checklist: flag off and alarm OK, traffic running, voice server and ngrok up, `VOICE_SERVER_URL` matching on the Lambda. After a run, the Box folder should contain the briefing, timeline, transcript, postmortem and a review task.
