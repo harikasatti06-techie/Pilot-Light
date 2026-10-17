@@ -41,7 +41,6 @@ Last updated: Fri Oct 16, 2026, 11:10pm.
 - [x] `pilotlight/incidents.py`: `put`, `get`, `latest`, `update`. Local JSON in `.state/incidents/` plus audit to `/pilotlight/incidents`
 - [x] `pilotlight/aws_tools.py`: `query_logs` (Logs Insights, falls back to filter), `what_changed` (config audit log), `execute_remediation` (allowlist + confirm, flips the flag, audits who)
 - [x] `pilotlight/tools.py`: P1 tools wired. `get_briefing`, `ask_runbook`, `page_teammate` still stubs.
-- [x] `pilotlight/box_tools.py`: **stubs** for `create_incident_folder`, `find_runbook`, `write_briefing`
 - [x] `services/checkout/handler.py`: local HTTP service on :8080, `GET /checkout`, ships logs to `/pilotlight/checkout`
 - [x] `services/incident/watcher.py`: alarm evaluator (replaces CloudWatch alarm + EventBridge). Polls every 2s, opens an incident on OK to ALARM. Honors `.state/force_alarm`.
 - [x] `services/incident/handler.py`: Lambda-shaped `handler(event)`. what_changed + query_logs, briefing, incident record, timeline. Skips `/call` while `VOICE_SERVER_URL` is empty.
@@ -49,12 +48,13 @@ Last updated: Fri Oct 16, 2026, 11:10pm.
 - [x] `pilotlight/agent.py`: `IncidentAgent` on Bedrock converse with tool use. Code-level confirm gate (fix runs only if the engineer's latest turn contains "confirm"). Logs user/agent turns to the timeline. 1.8s per turn on Nova 2 Lite.
 - [x] `pilotlight/chat.py`: terminal chat, `python -m pilotlight.chat [INCIDENT_ID]`, runs the postmortem on exit
 - [x] `pilotlight/postmortem.py`: Bedrock draft (six sections) from timeline and transcript, uploads transcript/timeline/postmortem, review task, marks incident resolved
-- [x] `box_tools.upload_text`, `create_review_task`: **stubs** writing to `.state/box_outbox/`
 - [x] **Nova 2 Sonic works** in this account (Fri 11:30pm test): speech in, speech out, tool calling, 8 kHz output accepted, about 3s to first audio. SDK: `AsyncBedrockRuntimeClient`, `await AsyncBedrockRuntimeConfig.resolve(region, aws_credentials_identity_resolver=EnvironmentCredentialsResolver(), transport=AWSCRTHTTPClient())`. Start the output reader after session start, prompt start and system prompt; keep sending silence while the model answers.
 - [x] Test passed: break, alarm in under 10s, incident with real what_changed and Logs Insights data, allowlist refusal, confirm gate, fix, alarm OK after 17s
 
 ### Not done (in order)
-- [ ] Box: `box_client.py`, `scripts/box_setup.py`, real `box_tools.py`, `get_briefing` from `incidents.get`, `ask_runbook`, `runbooks/checkout-5xx.md` (needs P3's credentials)
+- [x] Box (real, Neha's enterprise 1489125471, service account `pilot-light`): incident folder, runbook by metadata query, briefing, `ask_runbook` via **Box AI** (Bedrock fallback; Box AI needs a few seconds after a new file version), uploads with versioning, review task assigned to `BOX_REVIEWER_LOGIN`. `scripts/box_setup.py` is idempotent and supports `--collab email1,email2`. Runbook in Box updated to the adapted wording (version 2 of file 2532168279852).
+- [ ] Box collaborators: only Neha can see `/Runbooks` and `/Incidents` in the web UI. Run `python scripts/box_setup.py --collab <logins>` for Zain, Rajnikant, Harika.
+- [ ] Sat 11:30 cleanup (with Zain's approval): delete test incident folders in Box (first: `INC-20261017-063151`, id 428391585179) and `.state/incidents/` test records before the clean run.
 - [x] `voice/`: FastAPI server bridging Twilio Media Streams to Nova 2 Sonic (`uvicorn voice.server:app --port 8000`). `POST /call` (503 until Twilio creds are set), `WS /media`, `GET /health`. Reuses agent.py prompt, tools and confirm gate. Postmortem runs on hang-up. Tested with `voice/fake_twilio.py`: briefing 2.3s after connect, replies 1.2 to 2.8s, fix only after "confirm".
 - [ ] Twilio live: creds in `.env`, ngrok static domain in `VOICE_SERVER_URL`, real call test. Let the agent finish its last sentence before hanging up.
 - [ ] Code-level confirm check in the voice server (promised in the README)
@@ -75,7 +75,6 @@ Last updated: Fri Oct 16, 2026, 11:10pm.
 ## 6. Open decisions
 
 - **Telephony:** Twilio Media Streams (build plan). Voice engine is Nova 2 Sonic (decided, works). Amazon Connect is blocked by the SCP.
-- **Box AI Q&A** availability on the developer account. If disabled, `ask_runbook` uses Bedrock over the runbook text.
 
 
 ## 7. Commands

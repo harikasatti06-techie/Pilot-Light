@@ -18,8 +18,9 @@ def what_changed(incident_id: str, minutes: int = 60) -> str:
 
 
 def ask_runbook(incident_id: str, question: str) -> str:
-    """Box AI Q&A over the incident's runbook. (P3) STUB"""
-    return "The runbook says: if fail_mode is on, revert it to off, then confirm the error rate drops within two minutes."
+    """Box AI Q&A over the incident's runbook, with a Bedrock fallback. (P3)"""
+    from . import box_tools
+    return box_tools.ask_runbook(incident_id, question)
 
 
 def get_briefing(incident_id: str) -> str:

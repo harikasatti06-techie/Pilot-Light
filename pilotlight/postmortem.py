@@ -15,6 +15,8 @@ br = boto3.client("bedrock-runtime", region_name=AWS_REGION)
 PROMPT = """Write a concise incident postmortem in markdown with these sections:
 Summary, Impact, Timeline (UTC), Root Cause, Resolution, Action Items (with owners as TBD).
 Use only the facts below. Do not invent numbers, times, or names. Do not use em dashes.
+Timeline timestamps are UTC; spoken times in the transcript and tool results are US Pacific.
+Report times in UTC exactly as the timeline gives them, and do not infer a different date.
 
 INCIDENT: {incident_id}
 
