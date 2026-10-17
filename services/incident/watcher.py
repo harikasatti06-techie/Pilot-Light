@@ -12,7 +12,7 @@ from pathlib import Path
 
 from pilotlight import logstore
 from pilotlight.config import (ALARM_NAME, ALARM_THRESHOLD, ALARM_WINDOW_SECONDS,
-                               CHECKOUT_LOG_GROUP, STATE_DIR)
+                               CHECKOUT_LOG_GROUP, INCIDENTS_LOG_GROUP, STATE_DIR)
 from services.incident.handler import handler
 
 POLL_SECONDS = 2
@@ -36,10 +36,21 @@ def _fire(reason: str) -> None:
     threading.Thread(target=run, daemon=True).start()
 
 
+def _publish(state: str) -> None:
+    """Mirror the alarm state to CloudWatch Logs so the hosted dashboard can read it."""
+    try:
+        logstore.put_json(INCIDENTS_LOG_GROUP, "alarm-state", {
+            "alarm": ALARM_NAME, "state": state,
+            "at": datetime.datetime.now(datetime.timezone.utc).isoformat(timespec="seconds")})
+    except Exception as e:
+        print(f"  alarm state publish failed: {e}")
+
+
 def main() -> None:
     state = "OK"
     STATE_FILE.parent.mkdir(parents=True, exist_ok=True)
     STATE_FILE.write_text(state)
+    _publish(state)
     print(f"watching {CHECKOUT_LOG_GROUP}: ALARM at >= {ALARM_THRESHOLD} errors in {ALARM_WINDOW_SECONDS}s")
     while True:
         now = time.time()
@@ -56,6 +67,7 @@ def main() -> None:
                 _fire("forced by demo trigger" if forced else f"{len(errors)} errors in {ALARM_WINDOW_SECONDS}s")
             state = new
             STATE_FILE.write_text(state)
+            _publish(state)
         time.sleep(POLL_SECONDS)
 
 

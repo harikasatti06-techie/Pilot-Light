@@ -7,3 +7,5 @@ cdk.out/
 .DS_Store
 .state/
 *.wav
+.vercel
+.env.local

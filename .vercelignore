@@ -1,0 +1,16 @@
+.env
+.env.*
+!.env.example
+.state/
+.venv/
+.vercel/
+__pycache__/
+*.pyc
+*.wav
+*.png
+build/
+voice/
+services/
+scripts/
+runbooks/
+contracts/

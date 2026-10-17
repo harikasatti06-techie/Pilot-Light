@@ -51,6 +51,13 @@ PAGE_PHONE = os.getenv("PAGE_PHONE", "")
 # Code-level check that the caller said "confirm" before a remediation runs. Never disable in production.
 REQUIRE_SPOKEN_CONFIRM = os.getenv("REQUIRE_SPOKEN_CONFIRM", "true").lower() != "false"
 
+VOICE_SERVER_URL = os.getenv("VOICE_SERVER_URL", "").rstrip("/")
+
+# Operator dashboard (dashboard/app.py)
+DASHBOARD_USER = os.getenv("DASHBOARD_USER", "admin")
+DASHBOARD_PASSWORD = os.getenv("DASHBOARD_PASSWORD", "")  # no default: login is refused until set
+DASHBOARD_SECRET = os.getenv("DASHBOARD_SECRET", "")
+
 # GitHub (for auto-fix PR creation)
 GITHUB_REPO = os.getenv("GITHUB_REPO", "")
 GITHUB_TOKEN = os.getenv("GITHUB_TOKEN", "")

@@ -47,14 +47,21 @@ Last updated: Fri Oct 16, 2026.
   - Mocked handler tests pass. Nothing deployed or called against real AWS yet.
 
 ### Not done (in order)
-- [ ] `aws login` by Zain (interactive), `cdk bootstrap`, `cdk deploy`
-- [ ] Test: traffic → break → alarm ALARM within ~30s → `status.sh` shows incident and timeline rows → fix → alarm OK
-- [ ] Box: `box_client.py`, `scripts/box_setup.py`, real `box_tools.py`, `runbooks/checkout-5xx.md` (needs P3's credentials)
-- [ ] Incident Lambda dependencies: once `box_tools` imports `box_sdk_gen`, `build_asset()` in `infra/stack.py` must also `pip install box-sdk-gen` into `build/incident/` and `build/hangup/`
-- [ ] Connect (P2): instance with Connect Customer + outbound calling, phone number, then `connect/SETUP.md` steps 3 to 11. Put `CONNECT_*` in `.env`, redeploy, `scripts/test_call.py`
-- [ ] Verify on a real call: AI agent session exists on the contact (session Lambda timeline row), tools reach `pilotlight-tools`, `ListMessages` returns the caller's "confirm" before the tool call (else tune `caller_confirmed` retries)
-- [ ] `pilotlight/postmortem.py`, called from `services/hangup/handler.py`; also write `transcript.md` to Box there
-- [ ] Stretch: timeline page. README services list and architecture are already written.
+- [x] Box (real, Neha's enterprise 1489125471, service account `pilot-light`): incident folder, runbook by metadata query, briefing, `ask_runbook` via **Box AI** (Bedrock fallback; Box AI needs a few seconds after a new file version), uploads with versioning, review task assigned to `BOX_REVIEWER_LOGIN`. `scripts/box_setup.py` is idempotent and supports `--collab email1,email2`. Runbook in Box updated to the adapted wording (version 2 of file 2532168279852).
+- [ ] Box collaborators: Neha, Zain (zainbhutta.ai@gmail.com) and Rajnikant (trajanikantr@gmail.com) are editors on `/Runbooks` and `/Incidents`. Still needed: Harika via `python scripts/box_setup.py --collab <logins>`.
+- [ ] Sat 11:30 cleanup (with Zain's approval): delete test incident folders in Box (`INC-20261017-063151` id 428391585179, `INC-20261017-065436` id 428395190170, `INC-20261017-065521`, `INC-20261017-071133`, `INC-20261017-071847` id 428401391373, `INC-20261017-072653`, `INC-20261017-072734` id 428403255684, `INC-20261017-073346`) and `.state/incidents/` test records before the clean run.
+- [x] `voice/`: FastAPI server bridging Twilio Media Streams to Nova 2 Sonic (`uvicorn voice.server:app --port 8000`). `POST /call` (503 until Twilio creds are set), `WS /media`, `GET /health`. Reuses agent.py prompt, tools and confirm gate. Postmortem runs on hang-up. Tested with `voice/fake_twilio.py`: briefing 2.3s after connect, replies 1.2 to 2.8s, fix only after "confirm".
+- [x] Twilio + ngrok configured in `.env`: Twilio number +17177167379 (trial), on-call phone +17189157570 (verified), `VOICE_SERVER_URL=https://vacant-neatly-clock.ngrok-free.dev` (free static domain, `ngrok http 8000 --url <that>`). Calls fetch TwiML from `GET/POST /twiml` (trial rejects inline twiml).
+- [x] **Real phone call works end to end** (Sat 12:27am, `INC-20261017-072734`): break, alarm in 5s, Box folder and briefing, phone rings, briefing, what changed, Box AI runbook answer, fix refused until "confirm", fix, postmortem and review task in Box. Twilio upgraded to a full account; US standard-number dialing enabled via the Voice dialing permissions API.
+- [x] `end_call` voice tool + Twilio `mark` hang-up (10s fallback). Live call 12:43am: hang-up worked on real Twilio but cut off the goodbye.
+- [x] Goodbye fix (untested): server waits for goodbye audio spoken after `end_call`, plus a backstop that hangs up after any agent line containing "goodbye". **Not verified** (last test did not run). Safe demo fallback: Zain hangs up after the goodbye.
+- [x] Sonic auto-reconnect: on stream error, reopen a session on the same call with the transcript so far ("Sorry, I lost you for a second"), max 3; logs the last events sent. Forced-drop test passed. Cause of the 12:36am live crash ("Invalid input request" after the briefing) still unknown; the logging will capture it if it recurs.
+- Zain confirmed the second live call (12:27am) worked as expected. **Zain's budget is limited: do not run test calls or fake calls without explicit approval.**
+- [x] `dashboard/` (Rajnikant, cleaned up Sat): operator console. **Live on Vercel: https://pilot-light-beta.vercel.app** (project `pilot-light`, account zainbhuttaai-1770, deployed with `vercel deploy --prod` from the repo root; no GitHub link, so redeploy from the laptop). Entry point `index.py` (FastAPI zero-config, no vercel.json). Login `admin` + password in Vercel env (Zain has it; never commit it). Reads CloudWatch Logs in us-east-2 when there is no local state: incidents from `/pilotlight/incidents` stream `incidents`, alarm from stream `alarm-state` (published by the watcher), flag from config-audit. Vercel env: `PL_AWS_ACCESS_KEY_ID`, `PL_AWS_SECRET_ACCESS_KEY`, `PL_AWS_REGION` (IAM user `pilotlight-dashboard-readonly`, read-only on `/pilotlight/*` logs in us-east-2; delete after the event), `DASHBOARD_USER`, `DASHBOARD_PASSWORD`, `DASHBOARD_SECRET`, `BOX_*_FOLDER_ID`, `VOICE_SERVER_URL`. Security reviewed: no innerHTML, http(s)-only links, 401 on all data routes, docs disabled, login throttle on x-real-ip. Local: `uvicorn dashboard.app:app --port 8001`.
+- [ ] Code-level confirm check in the voice server (promised in the README)
+- [ ] Projector view: CloudWatch Logs Live Tail on `/pilotlight/checkout` replaces the blocked metrics dashboard. Optional: metric filter graph (filter creation is allowed, graph read untested)
+- [ ] README architecture diagram still shows the serverless design; update during the Sat 11:30 README pass
+- [ ] Teammate AWS access: console passwords are blocked by the SCP. Teammates sign up through the event link themselves, or work through Zain's machine.
 
 ## 4. Decisions already made (do not reopen)
 
@@ -89,6 +96,7 @@ scripts/force_alarm.sh    # only fires if the alarm is not already in ALARM; run
 
 python scripts/connect_setup.py   # after cdk deploy: AgentCore Gateway + target, Lambda association (idempotent)
 python scripts/test_call.py       # ring ONCALL_PHONE with a test incident, checkout untouched
+uvicorn dashboard.app:app --port 8001   # operator dashboard, http://localhost:8001
 ```
 
 ## 7. Rules
